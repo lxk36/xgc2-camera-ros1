@@ -1,7 +1,7 @@
 schema: xgc2.product.v1
 id: xgc2-camera-ros1
 name: XGC2 ROS1 Camera Driver
-version: 0.3.0-5
+version: 0.3.0-6
 kind: ros1-apt
 summary: ROS Noetic adapter for the independently released XGC2 Linux camera core.
 ros:
@@ -69,4 +69,4 @@ release:
   workflow: release.yml
   ci_workflow: ci.yml
   apt_versions:
-    focal: 0.3.0-5
+    focal: 0.3.0-6
