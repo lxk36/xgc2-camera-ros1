@@ -1,7 +1,7 @@
 schema: xgc2.product.v1
 id: xgc2-camera-ros1
 name: XGC2 ROS1 Camera Driver
-version: 0.3.0-2
+version: 0.3.0-3
 kind: ros1-apt
 summary: ROS Noetic adapter for the independently released XGC2 Linux camera core.
 ros:
@@ -37,16 +37,23 @@ apt:
   - ros-noetic-rostopic
   - ros-noetic-sensor-msgs
 usage:
-  install: |
-    sudo apt update
+  install: 'sudo apt update
+
     sudo apt install ros-noetic-xgc-camera-driver
-  smoke_test: |
-    roslaunch xgc_camera_driver camera.launch backend:=synthetic pixel_format:=bgr24
+
+    '
+  smoke_test: 'roslaunch xgc_camera_driver camera.launch backend:=synthetic pixel_format:=bgr24
+
     rostopic echo -n 1 /usb_cam/camera_info
-  notes: |
-    One process owns one camera and publishes synchronized Image and CameraInfo
+
+    '
+  notes: 'One process owns one camera and publishes synchronized Image and CameraInfo
+
     messages plus diagnostics. Calibration tools are released independently by
+
     the xgc2-camera-calibration-ros1 product.
+
+    '
 ownership:
   paths:
   - /opt/ros/noetic/share/xgc_camera_driver
@@ -62,4 +69,4 @@ release:
   workflow: release.yml
   ci_workflow: ci.yml
   apt_versions:
-    focal: 0.3.0-2
+    focal: 0.3.0-3
