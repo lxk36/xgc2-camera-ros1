@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>xgc_camera_driver</name>
+  <version>0.1.0</version>
+  <description>ROS Noetic adapter for the ROS-independent XGC2 camera library.</description>
+  <maintainer email="maintainers@xgc2.example">XGC2</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>camera_info_manager</build_depend>
+  <build_depend>cv_bridge</build_depend>
+  <build_depend>diagnostic_msgs</build_depend>
+  <build_depend>diagnostic_updater</build_depend>
+  <build_depend>image_transport</build_depend>
+  <build_depend>libavcodec-dev</build_depend>
+  <build_depend>libavutil-dev</build_depend>
+  <build_depend>libswscale-dev</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_export_depend>camera_info_manager</build_export_depend>
+  <build_export_depend>cv_bridge</build_export_depend>
+  <build_export_depend>diagnostic_msgs</build_export_depend>
+  <build_export_depend>diagnostic_updater</build_export_depend>
+  <build_export_depend>image_transport</build_export_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <build_export_depend>sensor_msgs</build_export_depend>
+  <exec_depend>camera_info_manager</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend>diagnostic_updater</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+  <exec_depend>roslaunch</exec_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>rostopic</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <test_depend>rostest</test_depend>
+  <test_depend>rospy</test_depend>
+
+  <export />
+</package>

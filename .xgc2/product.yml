@@ -1,0 +1,83 @@
+schema: xgc2.product.v1
+id: xgc2-camera-ros1
+name: XGC2 ROS1 Camera
+version: 0.1.0-1
+kind: ros1-apt
+summary: Productized ROS Noetic camera adapter and optional assisted calibration tools.
+ros:
+  distro: noetic
+  workspace: catkin
+  packages:
+    - xgc_camera_driver
+    - xgc_camera_calibration
+apt:
+  distribution: focal
+  install:
+    - ros-noetic-xgc-camera-driver
+    - ros-noetic-xgc-camera-calibration
+  packages:
+    - ros-noetic-xgc-camera-driver
+    - ros-noetic-xgc-camera-calibration
+  package_architectures:
+    ros-noetic-xgc-camera-driver:
+      - amd64
+      - arm64
+    ros-noetic-xgc-camera-calibration:
+      - amd64
+      - arm64
+  depends:
+    - libavcodec58
+    - libavutil56
+    - libopencv-core4.2
+    - libopencv-imgcodecs4.2
+    - libopencv-imgproc4.2
+    - libswscale5
+    - libxgc2-camera-dev (>= 0.1.0-1~focal)
+    - python3-numpy
+    - python3-opencv
+    - python3-pyqt5
+    - python3-yaml
+    - ros-noetic-camera-calibration
+    - ros-noetic-camera-info-manager
+    - ros-noetic-cv-bridge
+    - ros-noetic-diagnostic-msgs
+    - ros-noetic-diagnostic-updater
+    - ros-noetic-geometry-msgs
+    - ros-noetic-image-transport
+    - ros-noetic-rosbash
+    - ros-noetic-roscpp
+    - ros-noetic-roslaunch
+    - ros-noetic-rospy
+    - ros-noetic-rostopic
+    - ros-noetic-sensor-msgs
+    - ros-noetic-tf2-ros
+usage:
+  install: |
+    sudo apt update
+    sudo apt install ros-noetic-xgc-camera-driver
+    sudo apt install ros-noetic-xgc-camera-calibration  # optional GUI/tools
+  smoke_test: |
+    roslaunch xgc_camera_driver camera.launch backend:=synthetic pixel_format:=bgr24
+    rostopic echo -n 1 /usb_cam/camera_info
+  notes: |
+    One process owns one camera. The compatibility launch publishes
+    /usb_cam/image_raw and /usb_cam/camera_info with a shared stamp and optical
+    frame. The driver is a ROS adapter over the separately released,
+    ROS-independent libxgc2-camera-dev product.
+ownership:
+  paths:
+    - /opt/ros/noetic/share/xgc_camera_driver
+    - /opt/ros/noetic/lib/xgc_camera_driver
+    - /opt/ros/noetic/share/xgc_camera_calibration
+    - /opt/ros/noetic/lib/xgc_camera_calibration
+    - /opt/ros/noetic/lib/python3/dist-packages/xgc_camera_calibration
+    - /usr/share/xgc2/process-definitions/xgc2-camera-ros1.json
+release:
+  requires:
+    - libxgc2-camera-dev
+  repository: lxk36/xgc2-camera-ros1
+  ref: main
+  workflow: release.yml
+  ci_workflow: ci.yml
+  apt_versions:
+    focal: 0.1.0-1~focal

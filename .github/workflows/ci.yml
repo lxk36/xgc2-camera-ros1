@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate product contracts
+        run: .xgc2/scripts/check_package_compliance.sh
+
+  build-debs:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {architecture: amd64, runner: ubuntu-latest}
+          - {architecture: arm64, runner: ubuntu-24.04-arm}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, test, and install-check both Debian packages
+        run: |
+          .xgc2/scripts/build_debs_in_docker.sh \
+            --work-dir "$RUNNER_TEMP/xgc2-camera-ros1-${{ matrix.architecture }}" \
+            --output-dir "$GITHUB_WORKSPACE/debs"
+      - name: Create trusted artifact manifest
+        run: |
+          version="$(sed -nE 's/^version:[[:space:]]*([^[:space:]#]+).*/\1/p' .xgc2/product.yml | head -n1)"
+          python3 .xgc2/scripts/xgc2_artifact_manifest.py build \
+            --deb-dir debs --output-dir .ci/build-manifests \
+            --product xgc2-camera-ros1 --product-version "$version" \
+            --distribution focal --architecture "${{ matrix.architecture }}" \
+            --source-sha "$GITHUB_SHA" --ci-run-id "$GITHUB_RUN_ID" \
+            --ci-workflow "$GITHUB_WORKFLOW" --ci-workflow-ref "$GITHUB_WORKFLOW_REF"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xgc2-camera-ros1-debs-${{ matrix.architecture }}
+          path: |
+            debs/*.deb
+            .ci/build-manifests/*.json
+          include-hidden-files: true
+          retention-days: 14

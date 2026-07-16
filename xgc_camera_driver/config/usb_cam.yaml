@@ -1,0 +1,14 @@
+backend: v4l2
+video_device: /dev/video0
+width: 1920
+height: 1080
+framerate: 30.0
+pixel_format: mjpeg
+capture_mode: auto
+output_encoding: bgr8
+camera_name: usb_cam
+frame_id: usb_cam_optical_frame
+camera_info_url: ""
+capture_timeout_ms: 2000
+buffer_count: 4
+synthetic_seed: 1

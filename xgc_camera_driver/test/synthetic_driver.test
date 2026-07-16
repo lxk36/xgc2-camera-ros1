@@ -1,0 +1,17 @@
+<launch>
+  <include file="$(find xgc_camera_driver)/launch/camera.launch">
+    <arg name="camera_ns" value="test_camera" />
+    <arg name="backend" value="synthetic" />
+    <arg name="video_device" value="synthetic:0" />
+    <arg name="width" value="320" />
+    <arg name="height" value="240" />
+    <arg name="framerate" value="10.0" />
+    <arg name="pixel_format" value="bgr24" />
+    <arg name="output_encoding" value="bgr8" />
+  </include>
+
+  <test test-name="synthetic_camera_contract"
+        pkg="xgc_camera_driver"
+        type="test_synthetic_driver.py"
+        time-limit="20" />
+</launch>

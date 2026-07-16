@@ -1,0 +1,44 @@
+<launch>
+  <arg name="camera_ns" default="usb_cam" />
+  <arg name="node_name" default="driver" />
+  <arg name="config_file" default="$(find xgc_camera_driver)/config/usb_cam.yaml" />
+  <arg name="backend" default="v4l2" />
+  <arg name="video_device" default="/dev/video0" />
+  <arg name="width" default="1920" />
+  <arg name="height" default="1080" />
+  <arg name="framerate" default="30.0" />
+  <arg name="pixel_format" default="mjpeg" />
+  <arg name="capture_mode" default="auto" />
+  <arg name="output_encoding" default="bgr8" />
+  <arg name="camera_name" default="usb_cam" />
+  <arg name="frame_id" default="usb_cam_optical_frame" />
+  <arg name="camera_info_url" default="" />
+  <arg name="buffer_count" default="4" />
+  <arg name="capture_timeout_ms" default="2000" />
+  <arg name="synthetic_seed" default="1" />
+  <arg name="respawn" default="false" />
+
+  <group ns="$(arg camera_ns)">
+    <node pkg="xgc_camera_driver"
+          type="xgc_camera_driver_node"
+          name="$(arg node_name)"
+          output="screen"
+          respawn="$(arg respawn)">
+      <rosparam command="load" file="$(arg config_file)" />
+      <param name="backend" value="$(arg backend)" />
+      <param name="video_device" value="$(arg video_device)" />
+      <param name="width" value="$(arg width)" />
+      <param name="height" value="$(arg height)" />
+      <param name="framerate" value="$(arg framerate)" />
+      <param name="pixel_format" value="$(arg pixel_format)" />
+      <param name="capture_mode" value="$(arg capture_mode)" />
+      <param name="output_encoding" value="$(arg output_encoding)" />
+      <param name="camera_name" value="$(arg camera_name)" />
+      <param name="frame_id" value="$(arg frame_id)" />
+      <param name="camera_info_url" value="$(arg camera_info_url)" />
+      <param name="buffer_count" value="$(arg buffer_count)" />
+      <param name="capture_timeout_ms" value="$(arg capture_timeout_ms)" />
+      <param name="synthetic_seed" value="$(arg synthetic_seed)" />
+    </node>
+  </group>
+</launch>

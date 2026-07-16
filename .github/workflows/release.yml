@@ -1,0 +1,112 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_version:
+        description: Expected .xgc2/product.yml version
+        required: true
+        type: string
+      expected_source_sha:
+        description: Expected source commit SHA
+        required: true
+        type: string
+      prepare_action:
+        description: Release-train action
+        required: false
+        default: release
+        type: choice
+        options: [release, compatibility-verify]
+      apt_overlay_url:
+        description: Optional release-scoped staging APT base URL
+        required: false
+        default: ""
+        type: string
+      dependency_set_digest:
+        description: SHA256 of the resolved dependency set
+        required: false
+        default: ""
+        type: string
+      run_cpp_quality:
+        description: Run the source compliance gate
+        required: true
+        default: true
+        type: boolean
+      run_source_tests:
+        description: Run source tests (also always run in package build)
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  XGC2_APT_OVERLAY_URL: ${{ inputs.apt_overlay_url }}
+  XGC2_DEPENDENCY_SET_DIGEST: ${{ inputs.dependency_set_digest }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.contract.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: contract
+        name: Validate release inputs and product contract
+        env:
+          PREPARE_ACTION: ${{ inputs.prepare_action }}
+          DEPENDENCY_SET_DIGEST: ${{ inputs.dependency_set_digest }}
+        run: |
+          set -euo pipefail
+          case "$PREPARE_ACTION" in release|compatibility-verify) ;; *) exit 1 ;; esac
+          if [[ -n "$DEPENDENCY_SET_DIGEST" && ! "$DEPENDENCY_SET_DIGEST" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "invalid dependency_set_digest" >&2; exit 1
+          fi
+          version="$(sed -nE 's/^version:[[:space:]]*([^[:space:]#]+).*/\1/p' .xgc2/product.yml | head -n1)"
+          test "$version" = "${{ inputs.expected_version }}"
+          test "$(git rev-parse HEAD)" = "${{ inputs.expected_source_sha }}"
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+          .xgc2/scripts/check_package_compliance.sh
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {architecture: amd64, runner: ubuntu-latest}
+          - {architecture: arm64, runner: ubuntu-24.04-arm}
+    runs-on: ${{ matrix.runner }}
+    env:
+      PACKAGE_VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, test, and install-check release packages
+        run: |
+          .xgc2/scripts/build_debs_in_docker.sh \
+            --work-dir "$RUNNER_TEMP/xgc2-camera-ros1-${{ matrix.architecture }}" \
+            --output-dir "$GITHUB_WORKSPACE/debs"
+      - name: Create release-train manifest
+        run: |
+          python3 .xgc2/scripts/xgc2_artifact_manifest.py build \
+            --deb-dir debs --output-dir .ci/build-manifests \
+            --product xgc2-camera-ros1 --product-version "${{ inputs.expected_version }}" \
+            --distribution focal --architecture "${{ matrix.architecture }}" \
+            --source-sha "${{ inputs.expected_source_sha }}" --ci-run-id "$GITHUB_RUN_ID" \
+            --ci-workflow "$GITHUB_WORKFLOW" --ci-workflow-ref "$GITHUB_WORKFLOW_REF"
+      - name: Upload release artifacts
+        if: ${{ inputs.prepare_action == 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgc2-camera-ros1-release-debs-${{ matrix.architecture }}
+          path: |
+            debs/*.deb
+            .ci/build-manifests/*.json
+          include-hidden-files: true
+          retention-days: 14
