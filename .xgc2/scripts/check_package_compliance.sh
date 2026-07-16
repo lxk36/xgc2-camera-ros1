@@ -112,6 +112,8 @@ if grep -q '^    focal: .*~focal' .xgc2/product.yml; then
 fi
 grep -q 'xgc2::camera' xgc_camera_driver/CMakeLists.txt
 grep -q '/usr/share/xgc2/process-definitions' xgc_camera_driver/CMakeLists.txt
+grep -q '/workspace/repo/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
+grep -q '/workspace/work/src/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
 if grep -R -E -i '(fs150|scout|agilex)' \
   README.md process-definitions xgc_camera_driver xgc_camera_calibration >/dev/null; then
   echo "vehicle-specific integration leaked into the independent camera product" >&2

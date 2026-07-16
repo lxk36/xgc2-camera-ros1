@@ -47,9 +47,13 @@ docker run --rm \
       ros-noetic-rospack ros-noetic-rospy ros-noetic-rostest ros-noetic-rostopic \
       ros-noetic-sensor-msgs ros-noetic-tf2-ros
     rm -rf /workspace/work/src /workspace/work/build /workspace/work/devel /workspace/work/install-root
-    mkdir -p /workspace/work/src/xgc_camera_driver /workspace/work/src/xgc_camera_calibration
+    mkdir -p \
+      /workspace/work/src/xgc_camera_driver \
+      /workspace/work/src/xgc_camera_calibration \
+      /workspace/work/src/process-definitions
     rsync -a --delete /workspace/repo/xgc_camera_driver/ /workspace/work/src/xgc_camera_driver/
     rsync -a --delete /workspace/repo/xgc_camera_calibration/ /workspace/work/src/xgc_camera_calibration/
+    rsync -a --delete /workspace/repo/process-definitions/ /workspace/work/src/process-definitions/
     cd /workspace/work
     source /opt/ros/noetic/setup.bash
     catkin_make -DCMAKE_BUILD_TYPE=RelWithDebInfo
