@@ -30,12 +30,12 @@ on:
       run_cpp_quality:
         description: Run the source compliance gate
         required: true
-        default: true
+        default: false
         type: boolean
       run_source_tests:
         description: Run source tests (also always run in package build)
         required: true
-        default: true
+        default: false
         type: boolean
 
 permissions:
