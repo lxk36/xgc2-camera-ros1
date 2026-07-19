@@ -40,7 +40,7 @@ docker run --rm \
     apt-get install -y --no-install-recommends \
       build-essential cmake dpkg-dev fakeroot git pkg-config rsync \
       libavcodec-dev libavutil-dev libopencv-dev libswscale-dev libxgc2-camera-dev \
-      python3-nose python3-numpy python3-opencv python3-pyqt5 python3-yaml \
+      python3-nose python3-numpy python3-opencv python3-rospkg python3-yaml \
       ros-noetic-camera-calibration ros-noetic-camera-info-manager ros-noetic-cv-bridge \
       ros-noetic-diagnostic-msgs ros-noetic-diagnostic-updater ros-noetic-geometry-msgs \
       ros-noetic-image-transport ros-noetic-rosbash ros-noetic-roscpp ros-noetic-roslaunch \
@@ -62,7 +62,7 @@ docker run --rm \
     DESTDIR=/workspace/work/install-root catkin_make install -DCMAKE_INSTALL_PREFIX=/opt/ros/noetic -DCATKIN_ENABLE_TESTING=OFF
     /workspace/repo/.xgc2/scripts/package_debs.sh --install-root /workspace/work/install-root --output-dir /workspace/out
     if [[ "${INSTALL_CHECK}" == true ]]; then
-      apt-get install -y /workspace/out/ros-noetic-xgc-camera-driver_*.deb /workspace/out/ros-noetic-xgc-camera-calibration_*.deb
+      apt-get install -y /workspace/out/ros-noetic-xgc-camera-driver_*.deb /workspace/out/ros-noetic-xgc2-camera-calibration_*.deb
       /workspace/repo/.xgc2/scripts/check_installed_packages.sh
     fi
   '

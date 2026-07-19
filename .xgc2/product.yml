@@ -1,7 +1,7 @@
 schema: xgc2.product.v1
 id: xgc2-camera-ros1
 name: XGC2 ROS1 Camera
-version: 0.1.0-1
+version: 0.2.0-1
 kind: ros1-apt
 summary: Productized ROS Noetic camera adapter and optional assisted calibration tools.
 ros:
@@ -14,15 +14,15 @@ apt:
   distribution: focal
   install:
     - ros-noetic-xgc-camera-driver
-    - ros-noetic-xgc-camera-calibration
+    - ros-noetic-xgc2-camera-calibration
   packages:
     - ros-noetic-xgc-camera-driver
-    - ros-noetic-xgc-camera-calibration
+    - ros-noetic-xgc2-camera-calibration
   package_architectures:
     ros-noetic-xgc-camera-driver:
       - amd64
       - arm64
-    ros-noetic-xgc-camera-calibration:
+    ros-noetic-xgc2-camera-calibration:
       - amd64
       - arm64
   depends:
@@ -35,7 +35,7 @@ apt:
     - libxgc2-camera-dev (>= 0.1.0-1~focal)
     - python3-numpy
     - python3-opencv
-    - python3-pyqt5
+    - python3-rospkg
     - python3-yaml
     - ros-noetic-camera-calibration
     - ros-noetic-camera-info-manager
@@ -55,7 +55,7 @@ usage:
   install: |
     sudo apt update
     sudo apt install ros-noetic-xgc-camera-driver
-    sudo apt install ros-noetic-xgc-camera-calibration  # optional GUI/tools
+    sudo apt install ros-noetic-xgc2-camera-calibration  # optional WebUI/tools
   smoke_test: |
     roslaunch xgc_camera_driver camera.launch backend:=synthetic pixel_format:=bgr24
     rostopic echo -n 1 /usb_cam/camera_info
@@ -64,6 +64,8 @@ usage:
     /usb_cam/image_raw and /usb_cam/camera_info with a shared stamp and optical
     frame. The driver is a ROS adapter over the separately released,
     ROS-independent libxgc2-camera-dev product.
+    The extrinsic calibrator is a loopback-bound Python HTTP service with a
+    dependency-free browser frontend; it does not require a desktop toolkit.
 ownership:
   paths:
     - /opt/ros/noetic/share/xgc_camera_driver
@@ -80,4 +82,4 @@ release:
   workflow: release.yml
   ci_workflow: ci.yml
   apt_versions:
-    focal: 0.1.0-1
+    focal: 0.2.0-1

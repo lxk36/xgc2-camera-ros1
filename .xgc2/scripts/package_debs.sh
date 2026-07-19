@@ -56,6 +56,7 @@ write_control() {
   local package_name="$2"
   local dependencies="$3"
   local description="$4"
+  local extra_fields="${5:-}"
   mkdir -p "${package_root}/DEBIAN" "${package_root}/usr/share/doc/${package_name}"
   cat >"${package_root}/DEBIAN/control" <<EOF
 Package: ${package_name}
@@ -65,7 +66,7 @@ Priority: optional
 Architecture: ${ARCH}
 Maintainer: XGC2 <dev@xiaokang.ink>
 Depends: ${dependencies}
-Description: ${description}
+${extra_fields}Description: ${description}
 EOF
   install -m 0644 "${REPO_ROOT}/LICENSE" "${package_root}/usr/share/doc/${package_name}/copyright"
   chmod 0755 "${package_root}/DEBIAN"
@@ -90,14 +91,17 @@ build_driver() {
 }
 
 build_calibration() {
-  local package_name="ros-noetic-xgc-camera-calibration"
+  local package_name="ros-noetic-xgc2-camera-calibration"
   local package_root="${BUILD_ROOT}/${package_name}"
   mkdir -p "${package_root}"
   copy_ros_package xgc_camera_calibration "${package_root}"
   write_control "${package_root}" "${package_name}" \
-    "python3-numpy, python3-opencv, python3-pyqt5, python3-yaml, ros-noetic-camera-calibration, ros-noetic-cv-bridge, ros-noetic-geometry-msgs, ros-noetic-rosbash, ros-noetic-roslaunch, ros-noetic-rospy, ros-noetic-sensor-msgs, ros-noetic-tf2-ros" \
-    "XGC2 optional intrinsic and assisted extrinsic camera calibration tools"
+    "python3-numpy, python3-opencv, python3-rospkg, python3-yaml, ros-noetic-camera-calibration, ros-noetic-cv-bridge, ros-noetic-geometry-msgs, ros-noetic-rosbash, ros-noetic-roslaunch, ros-noetic-rospy, ros-noetic-sensor-msgs, ros-noetic-tf2-ros" \
+    "XGC2 intrinsic tools and Python/WebUI assisted extrinsic camera calibration" \
+    $'Provides: ros-noetic-xgc-camera-calibration\nConflicts: ros-noetic-xgc-camera-calibration\nReplaces: ros-noetic-xgc-camera-calibration\n'
   test -f "${package_root}${PREFIX}/lib/python3/dist-packages/xgc_camera_calibration/solver.py"
+  test -f "${package_root}${PREFIX}/lib/python3/dist-packages/xgc_camera_calibration/web_service.py"
+  test -f "${package_root}${PREFIX}/share/xgc_camera_calibration/web/index.html"
   find "${package_root}" -type d -name __pycache__ -prune -exec rm -rf {} +
   find "${package_root}" -type d -exec chmod 0755 {} +
   find "${package_root}" -type f -exec chmod 0644 {} +

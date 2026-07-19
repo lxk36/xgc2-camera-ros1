@@ -139,9 +139,9 @@
     },
     {
       "id": "xgc2-camera-extrinsic-calibrator-ros1",
-      "version": "1.0.0",
-      "label": "XGC2 assisted camera extrinsic calibration",
-      "description": "Match synchronized pose markers to pixels, solve robust PnP, and persist parent_T_camera_optical.",
+      "version": "2.0.0",
+      "label": "XGC2 camera extrinsic calibration WebUI",
+      "description": "Serve a local WebUI that matches synchronized pose markers to pixels, solves robust PnP, and persists parent_T_camera_optical.",
       "drivers": ["host"],
       "parameters": {
         "properties": {
@@ -153,17 +153,21 @@
           "opticalFrame": {"type": "string", "default": "usb_cam_optical_frame"},
           "maximumMarkerAge": {"type": "number", "default": 0.1, "minimum": 0.0},
           "maximumErrorPx": {"type": "number", "default": 5.0, "minimum": 0.0},
-          "display": {"type": "string", "default": ":0"},
+          "poseHistorySize": {"type": "integer", "default": 240, "minimum": 2, "maximum": 10000},
+          "jpegQuality": {"type": "integer", "default": 80, "minimum": 1, "maximum": 100},
+          "bindAddress": {"type": "string", "default": "127.0.0.1"},
+          "httpPort": {"type": "integer", "default": 8765, "minimum": 1, "maximum": 65535},
+          "frameAncestors": {"type": "string", "default": "'self' http://127.0.0.1:* http://localhost:*"},
+          "allowedOrigins": {"type": "string", "default": ""},
           "rosMasterUri": {"type": "string", "default": "http://127.0.0.1:11311"},
           "rosLogDir": {"type": "string", "default": "/var/lib/xgc2/ros/log/camera-calibration"}
         },
         "additionalProperties": false
       },
       "command": {
-        "executable": "/opt/ros/noetic/lib/xgc_camera_calibration/extrinsic_calibrator_ui.py",
-        "args": ["__name:=xgc_camera_extrinsic_calibrator", "_image_topic:=${imageTopic}", "_camera_info_topic:=${cameraInfoTopic}", "_pose_prefix:=${posePrefix}", "_output_file:=${outputFile}", "_parent_frame:=${parentFrame}", "_child_frame:=${opticalFrame}", "_maximum_marker_age:=${maximumMarkerAge}", "_maximum_inlier_error_px:=${maximumErrorPx}"],
+        "executable": "/opt/ros/noetic/lib/xgc_camera_calibration/extrinsic_calibrator_web.py",
+        "args": ["__name:=xgc_camera_extrinsic_calibrator_web", "_image_topic:=${imageTopic}", "_camera_info_topic:=${cameraInfoTopic}", "_pose_prefix:=${posePrefix}", "_output_file:=${outputFile}", "_parent_frame:=${parentFrame}", "_child_frame:=${opticalFrame}", "_maximum_marker_age:=${maximumMarkerAge}", "_maximum_inlier_error_px:=${maximumErrorPx}", "_pose_history_size:=${poseHistorySize}", "_jpeg_quality:=${jpegQuality}", "_bind_address:=${bindAddress}", "_http_port:=${httpPort}", "_frame_ancestors:=${frameAncestors}", "_allowed_origins:=${allowedOrigins}"],
         "env": {
-          "DISPLAY": "${display}",
           "ROS_MASTER_URI": "${rosMasterUri}",
           "ROS_LOG_DIR": "${rosLogDir}",
           "ROS_DISTRO": "noetic",

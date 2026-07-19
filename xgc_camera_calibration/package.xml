@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>xgc_camera_calibration</name>
-  <version>0.1.0</version>
-  <description>Optional intrinsic and assisted extrinsic calibration tools for XGC2 cameras.</description>
+  <version>0.2.0</version>
+  <description>Intrinsic tools and a Python/WebUI assisted extrinsic calibrator for XGC2 cameras.</description>
   <maintainer email="maintainers@xgc2.example">XGC2</maintainer>
   <license>BSD-3-Clause</license>
 
@@ -13,7 +13,7 @@
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
-  <exec_depend>python3-pyqt5</exec_depend>
+  <exec_depend>python3-rospkg</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>rosbash</exec_depend>
   <exec_depend>roslaunch</exec_depend>

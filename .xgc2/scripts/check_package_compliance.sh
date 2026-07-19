@@ -25,7 +25,7 @@ mkdir -p \
   "${MANIFEST_TEST_ROOT}/manifests"
 printf '%s\n' \
   'Package: xgc2-camera-manifest-contract' \
-  'Version: 0.1.0-1' \
+  'Version: 0.2.0-1' \
   'Section: misc' \
   'Priority: optional' \
   "Architecture: ${MANIFEST_TEST_ARCH}" \
@@ -34,13 +34,13 @@ printf '%s\n' \
   >"${MANIFEST_TEST_ROOT}/package/DEBIAN/control"
 dpkg-deb --build \
   "${MANIFEST_TEST_ROOT}/package" \
-  "${MANIFEST_TEST_ROOT}/debs/xgc2-camera-manifest-contract_0.1.0-1_${MANIFEST_TEST_ARCH}.deb" \
+  "${MANIFEST_TEST_ROOT}/debs/xgc2-camera-manifest-contract_0.2.0-1_${MANIFEST_TEST_ARCH}.deb" \
   >/dev/null
 python3 .xgc2/scripts/xgc2_artifact_manifest.py build \
   --deb-dir "${MANIFEST_TEST_ROOT}/debs" \
   --output-dir "${MANIFEST_TEST_ROOT}/manifests" \
   --product xgc2-camera-ros1 \
-  --product-version 0.1.0-1 \
+  --product-version 0.2.0-1 \
   --distribution focal \
   --architecture "${MANIFEST_TEST_ARCH}" \
   --source-sha 0000000000000000000000000000000000000000 \
@@ -67,6 +67,10 @@ definitions = plugin["definitions"]
 ids = [definition["id"] for definition in definitions]
 assert len(ids) == len(set(ids)) == 4
 driver = next(item for item in definitions if item["id"] == "xgc2-camera-v4l2-ros1")
+extrinsic = next(
+    item for item in definitions
+    if item["id"] == "xgc2-camera-extrinsic-calibrator-ros1"
+)
 for probe_name in ("readiness", "liveness"):
     probe = driver[probe_name]
     assert probe["kind"] == "exec"
@@ -78,6 +82,13 @@ for probe_name in ("readiness", "liveness"):
 assert driver["command"]["executable"] == (
     "/opt/ros/noetic/lib/xgc_camera_driver/xgc_camera_driver_node"
 )
+assert extrinsic["version"] == "2.0.0"
+assert extrinsic["command"]["executable"] == (
+    "/opt/ros/noetic/lib/xgc_camera_calibration/extrinsic_calibrator_web.py"
+)
+assert extrinsic["parameters"]["properties"]["bindAddress"]["default"] == "127.0.0.1"
+assert extrinsic["parameters"]["properties"]["httpPort"]["default"] == 8765
+assert "DISPLAY" not in extrinsic["command"]["env"]
 
 manifest_paths = list(
     (pathlib.Path(os.environ["MANIFEST_TEST_ROOT"]) / "manifests").glob("*.json")
@@ -90,7 +101,7 @@ assert set(manifest) == {
 }
 assert manifest["schema"] == "xgc2.build-artifact.v1"
 assert manifest["product"] == "xgc2-camera-ros1"
-assert manifest["version"] == "0.1.0-1"
+assert manifest["version"] == "0.2.0-1"
 assert set(manifest["ci"]) == {"run_id", "workflow", "workflow_ref"}
 assert len(manifest["debs"]) == 1
 deb = manifest["debs"][0]
@@ -98,14 +109,14 @@ assert set(deb) == {
     "file", "package", "version", "architecture", "sha256", "size",
 }
 assert deb["package"] == "xgc2-camera-manifest-contract"
-assert deb["version"] == "0.1.0-1"
+assert deb["version"] == "0.2.0-1"
 assert len(deb["sha256"]) == 64
 assert deb["size"] > 0
 PY
 
 grep -q '^id: xgc2-camera-ros1$' .xgc2/product.yml
-grep -q '^version: 0.1.0-1$' .xgc2/product.yml
-grep -q '^    focal: 0.1.0-1$' .xgc2/product.yml
+grep -q '^version: 0.2.0-1$' .xgc2/product.yml
+grep -q '^    focal: 0.2.0-1$' .xgc2/product.yml
 if grep -q '^    focal: .*~focal' .xgc2/product.yml; then
   echo "single-distribution ROS1 package version must not retain a focal suffix" >&2
   exit 1
@@ -114,6 +125,17 @@ grep -q 'xgc2::camera' xgc_camera_driver/CMakeLists.txt
 grep -q '/usr/share/xgc2/process-definitions' xgc_camera_driver/CMakeLists.txt
 grep -q '/workspace/repo/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
 grep -q '/workspace/work/src/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
+test -f xgc_camera_calibration/web/index.html
+test -f xgc_camera_calibration/web/app.js
+test -f xgc_camera_calibration/web/styles.css
+if grep -R --exclude-dir=__pycache__ -E '(PyQt|python3-pyqt5|extrinsic_calibrator_ui)' \
+  process-definitions xgc_camera_calibration README.md \
+  .xgc2/product.yml .xgc2/scripts/package_debs.sh \
+  .xgc2/scripts/build_debs_in_docker.sh \
+  .xgc2/scripts/check_installed_packages.sh >/dev/null; then
+  echo "desktop Qt dependency leaked into the WebUI camera calibrator" >&2
+  exit 1
+fi
 if grep -R -E -i '(fs150|scout|agilex)' \
   README.md process-definitions xgc_camera_driver xgc_camera_calibration >/dev/null; then
   echo "vehicle-specific integration leaked into the independent camera product" >&2
