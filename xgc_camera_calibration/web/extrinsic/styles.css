@@ -186,31 +186,3 @@ dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
   .viewer-panel { min-height: 420px; }
   .controls { overflow: visible; }
 }
-
-/* ---- Mode tabs + intrinsic coverage (unified calibrator) ---- */
-.modes { display: flex; gap: 6px; }
-.tab {
-  padding: 6px 14px;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--muted, #8b98a8);
-  background: transparent;
-  border: 1px solid var(--line, #2b3644);
-  border-radius: 999px;
-}
-.tab:hover { color: var(--text, #e6edf3); }
-.tab.active { color: #fff; background: #26303c; border-color: var(--accent, #3b82f6); }
-
-#intrinsic-image {
-  width: 100%;
-  display: block;
-  border-radius: 8px;
-  background: #000;
-  object-fit: contain;
-}
-#intrinsic-bars .bar { margin: 10px 0; }
-.bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted, #8b98a8); margin-bottom: 4px; }
-.bar-track { height: 8px; background: rgba(0, 0, 0, 0.4); border-radius: 999px; overflow: hidden; }
-.bar-fill { height: 100%; width: 0; background: #f59e0b; border-radius: 999px; transition: width 0.15s ease; }
-.bar-fill.full { background: #22c55e; }

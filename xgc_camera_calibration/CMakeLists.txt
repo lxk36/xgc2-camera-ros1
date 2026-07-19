@@ -6,7 +6,8 @@ catkin_python_setup()
 catkin_package()
 
 catkin_install_python(PROGRAMS
-  scripts/calibrator_web.py
+  scripts/extrinsic_calibrator_web.py
+  scripts/intrinsic_calibrator_web.py
   scripts/extrinsic_tf_publisher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

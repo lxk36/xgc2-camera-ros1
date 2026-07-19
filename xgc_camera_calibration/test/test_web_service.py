@@ -188,7 +188,7 @@ class WebCalibrationServiceTest(unittest.TestCase):
         )
 
     def test_http_server_serves_assets_health_and_api(self):
-        web_root = Path(__file__).resolve().parents[1] / "web"
+        web_root = Path(__file__).resolve().parents[1] / "web" / "extrinsic"
         server = CalibrationHttpServer(
             ("127.0.0.1", 0),
             self.service,
@@ -217,7 +217,7 @@ class WebCalibrationServiceTest(unittest.TestCase):
                 self.assertEqual(response.headers.get_content_type(), "image/jpeg")
                 self.assertTrue(response.read().startswith(b"\xff\xd8"))
             with urllib.request.urlopen(base + "/", timeout=3) as response:
-                self.assertIn(b"Camera calibration", response.read())
+                self.assertIn(b"Camera extrinsic calibration", response.read())
             with self.assertRaises(urllib.error.HTTPError) as context:
                 urllib.request.urlopen(base + "/../package.xml", timeout=3)
             self.assertEqual(context.exception.code, 404)

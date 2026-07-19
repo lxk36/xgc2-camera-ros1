@@ -428,7 +428,7 @@ class CalibrationHttpServer(ThreadingHTTPServer):
     def __init__(
         self,
         address: Tuple[str, int],
-        service: CalibrationService,
+        service: Optional[CalibrationService],
         web_root: Path,
         *,
         frame_ancestors: str,
@@ -436,6 +436,10 @@ class CalibrationHttpServer(ThreadingHTTPServer):
         logger: Optional[Callable[[str], None]] = None,
         intrinsic_service: Optional[Any] = None,
     ):
+        # The extrinsic and intrinsic calibrators are separate apps that share
+        # this transport; each runs with only its own service present.
+        if service is None and intrinsic_service is None:
+            raise ValueError("at least one of service / intrinsic_service is required")
         root = Path(web_root).resolve()
         for required in ("index.html", "app.js", "styles.css"):
             if not (root / required).is_file():
@@ -534,33 +538,56 @@ class CalibrationRequestHandler(BaseHTTPRequestHandler):
             raise ApiError(HTTPStatus.NOT_FOUND, "Intrinsic calibration is not enabled")
         return service
 
+    def _extrinsic(self) -> Any:
+        service = self.calibration_server.service
+        if service is None:
+            raise ApiError(HTTPStatus.NOT_FOUND, "Extrinsic calibration is not enabled")
+        return service
+
+    def _intrinsic_ref(self, path: str) -> bytes:
+        token = path[len("/api/v1/intrinsic/ref/"):].split(".", 1)[0]
+        try:
+            index = int(token)
+        except ValueError as error:
+            raise ApiError(HTTPStatus.BAD_REQUEST, "Reference index must be an integer") from error
+        jpeg = self._intrinsic().ref(index)
+        if jpeg is None:
+            raise ApiError(HTTPStatus.NOT_FOUND, "No reference image for that target")
+        return jpeg
+
     def _dispatch(self) -> None:
         path = urlsplit(self.path).path
-        service = self.calibration_server.service
         if self.command in ("GET", "HEAD"):
             if path == "/healthz":
-                state = service.state()
-                self._send_json(
-                    HTTPStatus.OK,
-                    {
-                        "status": "ok",
-                        "image_ready": bool(state["source"].get("image_ready")),
-                        "camera_info_ready": bool(state["source"].get("camera_info_ready")),
-                        "marker_count": int(state["source"].get("marker_count", 0)),
-                    },
-                )
+                payload: Dict[str, Any] = {"status": "ok"}
+                if self.calibration_server.service is not None:
+                    state = self.calibration_server.service.state()
+                    payload["image_ready"] = bool(state["source"].get("image_ready"))
+                    payload["camera_info_ready"] = bool(state["source"].get("camera_info_ready"))
+                    payload["marker_count"] = int(state["source"].get("marker_count", 0))
+                if self.calibration_server.intrinsic_service is not None:
+                    intrinsic_state = self.calibration_server.intrinsic_service.state()
+                    payload.setdefault("image_ready", bool(intrinsic_state.get("image_ready")))
+                    payload["camera_control"] = bool(intrinsic_state.get("camera_control"))
+                self._send_json(HTTPStatus.OK, payload)
                 return
             if path == "/api/v1/state":
-                self._send_json(HTTPStatus.OK, service.state())
+                self._send_json(HTTPStatus.OK, self._extrinsic().state())
                 return
             if path == "/api/v1/image.jpg":
-                self._send_bytes(HTTPStatus.OK, "image/jpeg", service.image_jpeg())
+                self._send_bytes(HTTPStatus.OK, "image/jpeg", self._extrinsic().image_jpeg())
                 return
             if path == "/api/v1/intrinsic/state":
                 self._send_json(HTTPStatus.OK, self._intrinsic().state())
                 return
             if path == "/api/v1/intrinsic/image.jpg":
                 self._send_bytes(HTTPStatus.OK, "image/jpeg", self._intrinsic().image_jpeg())
+                return
+            if path == "/api/v1/intrinsic/targets":
+                self._send_json(HTTPStatus.OK, self._intrinsic().targets_document())
+                return
+            if path.startswith("/api/v1/intrinsic/ref/"):
+                self._send_bytes(HTTPStatus.OK, "image/jpeg", self._intrinsic_ref(path))
                 return
             asset = self.static_files.get(path)
             if asset:
@@ -579,15 +606,15 @@ class CalibrationRequestHandler(BaseHTTPRequestHandler):
             if path == "/api/v1/freeze":
                 if request not in ({}, None):
                     raise ApiError(HTTPStatus.BAD_REQUEST, "Freeze request must be an empty object")
-                self._send_json(HTTPStatus.OK, service.freeze())
+                self._send_json(HTTPStatus.OK, self._extrinsic().freeze())
                 return
             if path == "/api/v1/live":
                 if request not in ({}, None):
                     raise ApiError(HTTPStatus.BAD_REQUEST, "Live request must be an empty object")
-                self._send_json(HTTPStatus.OK, service.live())
+                self._send_json(HTTPStatus.OK, self._extrinsic().live())
                 return
             if path == "/api/v1/solve":
-                self._send_json(HTTPStatus.OK, service.solve(request))
+                self._send_json(HTTPStatus.OK, self._extrinsic().solve(request))
                 return
             if path == "/api/v1/intrinsic/calibrate":
                 if request not in ({}, None):
@@ -598,6 +625,22 @@ class CalibrationRequestHandler(BaseHTTPRequestHandler):
                 if request not in ({}, None):
                     raise ApiError(HTTPStatus.BAD_REQUEST, "Reset request must be an empty object")
                 self._send_json(HTTPStatus.OK, self._intrinsic().reset())
+                return
+            if path == "/api/v1/intrinsic/goto":
+                index = request.get("index") if isinstance(request, dict) else None
+                if not isinstance(index, int) or isinstance(index, bool):
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "goto requires an integer 'index'")
+                self._send_json(HTTPStatus.OK, self._intrinsic().goto(index))
+                return
+            if path == "/api/v1/intrinsic/reset_pose":
+                if request not in ({}, None):
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "reset_pose request must be an empty object")
+                self._send_json(HTTPStatus.OK, self._intrinsic().reset_pose())
+                return
+            if path == "/api/v1/intrinsic/auto_run":
+                if request not in ({}, None):
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "auto_run request must be an empty object")
+                self._send_json(HTTPStatus.OK, self._intrinsic().auto_run())
                 return
             raise ApiError(HTTPStatus.NOT_FOUND, "Route not found")
         raise ApiError(HTTPStatus.METHOD_NOT_ALLOWED, "Method not allowed")

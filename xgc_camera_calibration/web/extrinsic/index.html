@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>XGC2 Camera Calibration</title>
+    <title>XGC2 Camera Extrinsic Calibration</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
@@ -11,11 +11,7 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">XGC2 / ROS1</p>
-          <h1>Camera calibration</h1>
-        </div>
-        <div class="modes" role="tablist">
-          <button class="tab" data-mode="intrinsic" type="button">Intrinsic</button>
-          <button class="tab" data-mode="extrinsic" type="button">Extrinsic</button>
+          <h1>Camera extrinsic calibration</h1>
         </div>
         <div class="health" aria-live="polite">
           <span id="mode-chip" class="chip">Connecting</span>
@@ -26,36 +22,7 @@
       <section id="error-banner" class="banner error hidden" role="alert"></section>
       <section id="success-banner" class="banner success hidden" role="status"></section>
 
-      <!-- Intrinsic mode: live corner-overlaid image + X/Y/Size/Skew coverage. -->
-      <div id="intrinsic-view" class="workspace">
-        <section class="viewer-panel" aria-label="Camera frame">
-          <div class="viewer"><img id="intrinsic-image" alt="camera frame"></div>
-          <div class="viewer-meta">
-            <span id="intrinsic-samples">0 samples</span>
-            <span id="intrinsic-status"></span>
-          </div>
-        </section>
-        <aside class="controls">
-          <section class="control-section">
-            <h2>Coverage</h2>
-            <div id="intrinsic-bars"></div>
-          </section>
-          <section class="control-section solve-section">
-            <h2>Calibrate</h2>
-            <div class="button-row">
-              <button id="intrinsic-calibrate" class="primary" type="button" disabled>Calibrate and save</button>
-              <button id="intrinsic-reset" type="button">Reset</button>
-            </div>
-            <pre id="intrinsic-result" class="result" hidden></pre>
-          </section>
-          <p class="hint">Move the camera so the board is seen far and near, at the image edges,
-            and tilted, until all four bars fill; then Calibrate. Works against a real or a
-            simulated camera on the same image topic.</p>
-        </aside>
-      </div>
-
-      <!-- Extrinsic mode: freeze a synchronized frame, match markers, solve PnP. -->
-      <div id="extrinsic-view" class="workspace hidden">
+      <div class="workspace">
         <section class="viewer-panel" aria-label="Camera frame">
           <div class="viewer">
             <canvas id="camera-canvas"></canvas>

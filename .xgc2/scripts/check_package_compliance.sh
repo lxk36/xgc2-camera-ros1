@@ -65,11 +65,15 @@ plugin = json.loads(plugin_path.read_text(encoding="utf-8"))
 assert plugin["apiVersion"] == "xgc.execution.process/v1"
 definitions = plugin["definitions"]
 ids = [definition["id"] for definition in definitions]
-assert len(ids) == len(set(ids)) == 3
+assert len(ids) == len(set(ids)) == 4
 driver = next(item for item in definitions if item["id"] == "xgc2-camera-v4l2-ros1")
-calibrator = next(
+intrinsic = next(
     item for item in definitions
-    if item["id"] == "xgc2-camera-calibrator-ros1"
+    if item["id"] == "xgc2-camera-intrinsic-calibrator-ros1"
+)
+extrinsic = next(
+    item for item in definitions
+    if item["id"] == "xgc2-camera-extrinsic-calibrator-ros1"
 )
 for probe_name in ("readiness", "liveness"):
     probe = driver[probe_name]
@@ -82,16 +86,20 @@ for probe_name in ("readiness", "liveness"):
 assert driver["command"]["executable"] == (
     "/opt/ros/noetic/lib/xgc_camera_driver/xgc_camera_driver_node"
 )
-assert calibrator["version"] == "3.0.0"
-assert calibrator["command"]["executable"] == (
-    "/opt/ros/noetic/lib/xgc_camera_calibration/calibrator_web.py"
+assert extrinsic["version"] == "2.0.0"
+assert extrinsic["command"]["executable"] == (
+    "/opt/ros/noetic/lib/xgc_camera_calibration/extrinsic_calibrator_web.py"
 )
-assert calibrator["parameters"]["properties"]["bindAddress"]["default"] == "127.0.0.1"
-assert calibrator["parameters"]["properties"]["httpPort"]["default"] == 8765
-assert calibrator["parameters"]["properties"]["intrinsicOutputFile"]["default"] == (
-    "/var/lib/xgc2/camera/calibrations/usb_cam/intrinsics.yaml"
+assert extrinsic["parameters"]["properties"]["bindAddress"]["default"] == "127.0.0.1"
+assert extrinsic["parameters"]["properties"]["httpPort"]["default"] == 8765
+assert "DISPLAY" not in extrinsic["command"]["env"]
+assert intrinsic["version"] == "2.0.0"
+assert intrinsic["command"]["executable"] == (
+    "/opt/ros/noetic/lib/xgc_camera_calibration/intrinsic_calibrator_web.py"
 )
-assert "DISPLAY" not in calibrator["command"]["env"]
+assert intrinsic["parameters"]["properties"]["httpPort"]["default"] == 8766
+assert intrinsic["parameters"]["properties"]["cameraControl"]["default"] is False
+assert "DISPLAY" not in intrinsic["command"]["env"]
 
 manifest_paths = list(
     (pathlib.Path(os.environ["MANIFEST_TEST_ROOT"]) / "manifests").glob("*.json")
@@ -128,9 +136,11 @@ grep -q 'xgc2::camera' xgc_camera_driver/CMakeLists.txt
 grep -q '/usr/share/xgc2/process-definitions' xgc_camera_driver/CMakeLists.txt
 grep -q '/workspace/repo/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
 grep -q '/workspace/work/src/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
-test -f xgc_camera_calibration/web/index.html
-test -f xgc_camera_calibration/web/app.js
-test -f xgc_camera_calibration/web/styles.css
+for page in extrinsic intrinsic; do
+  test -f "xgc_camera_calibration/web/${page}/index.html"
+  test -f "xgc_camera_calibration/web/${page}/app.js"
+  test -f "xgc_camera_calibration/web/${page}/styles.css"
+done
 if grep -R --exclude-dir=__pycache__ -E '(PyQt|python3-pyqt5|extrinsic_calibrator_ui)' \
   process-definitions xgc_camera_calibration README.md \
   .xgc2/product.yml .xgc2/scripts/package_debs.sh \

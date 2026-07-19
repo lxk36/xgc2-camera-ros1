@@ -10,12 +10,14 @@ repository only maps frames, timestamps, calibration and health into ROS.
 - `xgc_camera_driver` is the mandatory one-camera/one-process adapter. It
   publishes a synchronized `image_transport::CameraPublisher` pair and ROS
   diagnostics.
-- `xgc_camera_calibration` is optional. It contains one unified calibration
-  WebUI that serves both intrinsic (auto-collected chessboard views, cv2-direct
-  solve) and assisted 3D-to-2D extrinsic calibration, a reusable RANSAC/LM PnP
-  solver and a TF publisher. The frontend is plain HTML, CSS and JavaScript with
-  no npm or framework runtime, and the backend needs no `cv_bridge` or desktop
-  Qt dependency.
+- `xgc_camera_calibration` is optional. It contains two calibration WebUIs that
+  share one transport: an intrinsic calibrator (a 3D sample guide with
+  X/Y/Size/Skew coverage and cv2-direct solve) and an assisted 3D-to-2D extrinsic
+  calibrator (robust RANSAC/LM PnP), plus a TF publisher. The intrinsic guide is
+  camera-agnostic and lights up interactive fly-to / auto-run controls only when
+  it runs against a Gazebo simulation. Both frontends are plain HTML, CSS and
+  JavaScript with no npm or framework runtime, and the backend needs no
+  `cv_bridge` or desktop Qt dependency.
 
 No platform-specific camera implementation is copied into this product. The
 only capture API dependency is the CMake package `xgc2_camera`, public header
@@ -73,27 +75,41 @@ share directory. Interactive launch defaults use the invoking user's state direc
 Automation definitions default to `/var/lib/xgc2/camera/calibrations` and allow
 every path to be overridden.
 
-One `calibrator.launch` serves both calibration modes from a single WebUI and
-HTTP port; switch with the **Intrinsic** / **Extrinsic** tabs. The usual order
-is intrinsics first, then extrinsics:
+The two calibrators run separately, each with its own page and HTTP port, since
+they use different scenes and workflows. The usual order is intrinsics first,
+then extrinsics.
+
+Intrinsic calibration (a 3D sample guide plus X/Y/Size/Skew coverage):
 
 ```bash
-roslaunch xgc_camera_calibration calibrator.launch \
+roslaunch xgc_camera_calibration intrinsic_calibrator.launch \
+  image_topic:=/usb_cam/image_raw \
+  board_cols:=7 board_rows:=5 square_size:=0.20 \
+  bind_address:=127.0.0.1 http_port:=8766 \
+  camera_control:=true camera_model_name:=gazebo_static_camera
+```
+
+Open `http://127.0.0.1:8766/`. Move the camera so the chessboard is seen near
+and far, at the image edges and tilted; the backend auto-collects geometrically
+diverse views and fills the coverage bars (board size is interior corners, so an
+8x6-square board is `7x5`). Select **Calibrate and save** once coverage is good
+to solve (cv2-direct, no `cv_bridge`) and write `intrinsics.yaml` atomically. The
+guide's spheres, reference thumbnails and coverage bars work for any camera;
+`camera_control:=true` additionally shows the live camera pose and lets you click
+a sphere to fly there or **Auto-run** the whole sweep over Gazebo's own
+`/gazebo/set_model_state` topic (only meaningful in simulation).
+
+Assisted extrinsic calibration:
+
+```bash
+roslaunch xgc_camera_calibration extrinsic_calibrator.launch \
   image_topic:=/usb_cam/image_raw \
   camera_info_topic:=/usb_cam/camera_info \
   pose_prefix:=/vrpn_client_node \
-  intrinsic_square_size:=0.20 intrinsic_board_cols:=7 intrinsic_board_rows:=5 \
   bind_address:=127.0.0.1 http_port:=8765
 ```
 
-Open `http://127.0.0.1:8765/`. On the **Intrinsic** tab, move the camera so a
-chessboard is seen near and far, at the image edges and tilted; the backend
-auto-collects geometrically diverse views and fills the X/Y/Size/Skew coverage
-bars. Board size is given in interior corners (an 8x6-square board is `7x5`).
-Select **Calibrate and save** once coverage is good to solve intrinsics
-(cv2-direct, no `cv_bridge`) and write `intrinsics.yaml` atomically.
-
-On the **Extrinsic** tab, freeze a synchronized frame, select each marker
+Open `http://127.0.0.1:8765/`, freeze a synchronized frame, select each marker
 name and click its image center, then select **Solve and save**. Use at least
 four correspondences; six or more non-coplanar points provide useful outlier
 rejection. The Python backend keeps a bounded pose history and selects the
@@ -101,15 +117,14 @@ sample nearest to the frozen image timestamp. Samples outside
 `maximum_marker_age` are excluded. The solver performs RANSAC, iterative
 refinement, degeneracy checks, error gating and an atomic YAML write.
 
-The WebUI uses polling and JPEG snapshots over a small versioned HTTP API:
+Both WebUIs use polling and JPEG snapshots over a small versioned HTTP API:
 
-- `GET /healthz` and `GET /api/v1/state` expose process/input state;
-- `GET /api/v1/image.jpg` returns the live or frozen camera frame;
-- `POST /api/v1/freeze`, `/api/v1/live` and `/api/v1/solve` own the extrinsic
-  operator workflow;
-- `GET /api/v1/intrinsic/state` and `/api/v1/intrinsic/image.jpg` expose intrinsic
-  coverage and the annotated frame; `POST /api/v1/intrinsic/calibrate` and
-  `/api/v1/intrinsic/reset` own the intrinsic workflow.
+- `GET /healthz` exposes process/input state;
+- extrinsic: `GET /api/v1/state` and `/api/v1/image.jpg`; `POST /api/v1/freeze`,
+  `/api/v1/live` and `/api/v1/solve` own the operator workflow;
+- intrinsic: `GET /api/v1/intrinsic/{state,image.jpg,targets}` and
+  `/api/v1/intrinsic/ref/<i>.jpg`; `POST /api/v1/intrinsic/{calibrate,reset}` and,
+  in simulation, `/api/v1/intrinsic/{goto,reset_pose,auto_run}`.
 
 No ROS logic or calibration math runs in the browser. A frozen frame and its
 time-matched marker poses form one immutable backend generation, and solve
@@ -140,7 +155,8 @@ The driver package installs
 or its containing directory in `XGC_PROCESS_DEFINITION_PLUGINS`. It registers:
 
 - `xgc2-camera-v4l2-ros1`
-- `xgc2-camera-calibrator-ros1`
+- `xgc2-camera-intrinsic-calibrator-ros1`
+- `xgc2-camera-extrinsic-calibrator-ros1`
 - `xgc2-camera-extrinsic-tf-ros1`
 
 Driver readiness and liveness consume the small `header/stamp` field of an
@@ -149,9 +165,10 @@ ready, and probes never stream full image payloads. Failures exit nonzero, camer
 resources are released through RAII, and the driver definition allows at most
 three supervised restarts.
 
-The calibrator definition runs
-`xgc_camera_calibration/calibrator_web.py` directly without a desktop
-session or `DISPLAY`. Its default panel URL is `http://127.0.0.1:8765/`.
+The two calibrator definitions run `xgc_camera_calibration/intrinsic_calibrator_web.py`
+(default panel `http://127.0.0.1:8766/`) and `extrinsic_calibrator_web.py`
+(default panel `http://127.0.0.1:8765/`) directly, without a desktop session or
+`DISPLAY`.
 
 ## Build and release
 

@@ -16,7 +16,7 @@ from xgc_camera_calibration.intrinsic_service import IntrinsicCalibrationService
 from xgc_camera_calibration.web_service import ApiError, CalibrationHttpServer
 
 
-WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
+WEB_ROOT = Path(__file__).resolve().parents[1] / "web" / "intrinsic"
 
 
 def render_board(cols_squares=8, rows_squares=6, square=40, border=40):
@@ -69,6 +69,28 @@ class IntrinsicServiceTest(unittest.TestCase):
             service = make_service(Path(directory) / "intrinsics.yaml")
             service.process_frame(render_board())
             self.assertEqual(service.reset()["samples"], 0)
+
+    def test_guide_targets_and_agnostic_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            service = make_service(Path(directory) / "intrinsics.yaml")
+            document = service.targets_document()
+            self.assertIn("center", document["board"])
+            self.assertEqual(len(document["views"]), 10)
+            self.assertFalse(document["camera_control"])
+            state = service.state()
+            self.assertEqual(len(state["targets"]), 10)
+            self.assertIsNone(state["pose"])
+            self.assertFalse(state["camera_control"])
+            self.assertEqual(state["next"], 0)
+            self.assertFalse(state["targets"][0]["done"])
+
+    def test_camera_actions_require_control(self):
+        with tempfile.TemporaryDirectory() as directory:
+            service = make_service(Path(directory) / "intrinsics.yaml")
+            for action in (lambda: service.goto(0), service.reset_pose, service.auto_run):
+                with self.assertRaises(ApiError) as caught:
+                    action()
+                self.assertEqual(caught.exception.status, int(HTTPStatus.NOT_FOUND))
 
     def test_transport_routes_intrinsic_and_gates_when_absent(self):
         with tempfile.TemporaryDirectory() as directory:
