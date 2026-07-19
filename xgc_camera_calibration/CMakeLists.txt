@@ -21,6 +21,7 @@ install(DIRECTORY web
 if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_solver.py)
   catkin_add_nosetests(test/test_intrinsic_solver.py)
+  catkin_add_nosetests(test/test_intrinsic_service.py)
   catkin_add_nosetests(test/test_intrinsic_wrapper.py)
   catkin_add_nosetests(test/test_web_service.py)
 endif()
