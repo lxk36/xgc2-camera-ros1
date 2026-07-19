@@ -28,6 +28,11 @@ def parser():
     return result
 
 
+def non_ros_arguments(arguments):
+    """Return CLI arguments after removing ROS 1 remapping tokens."""
+    return [argument for argument in arguments if ":=" not in argument]
+
+
 def atomic_write(path, content):
     descriptor, temporary = tempfile.mkstemp(prefix="." + path.name + ".", dir=str(path.parent))
     try:
@@ -67,7 +72,9 @@ def collect_result(archive, output_dir, output_file):
 
 
 def main():
-    args = parser().parse_args()
+    # roslaunch appends tokens such as __name:=... and __log:=....  This
+    # wrapper owns ordinary argparse flags, so remove ROS remappings first.
+    args = parser().parse_args(non_ros_arguments(sys.argv[1:]))
     output_dir = Path(args.output_dir).expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     archive = Path("/tmp/calibrationdata.tar.gz")

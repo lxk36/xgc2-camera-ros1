@@ -15,6 +15,15 @@ SPEC.loader.exec_module(MODULE)
 
 
 class IntrinsicResultCollectionTest(unittest.TestCase):
+    def test_roslaunch_remapping_arguments_are_filtered(self):
+        arguments = [
+            "--board-size",
+            "7x5",
+            "__name:=xgc_camera_intrinsic_calibrator",
+            "__log:=/tmp/intrinsic.log",
+        ]
+        self.assertEqual(MODULE.non_ros_arguments(arguments), ["--board-size", "7x5"])
+
     def test_extracts_ost_yaml_to_owned_output(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
