@@ -73,10 +73,25 @@ grep -q '^secs:' "${RUNTIME}/stamp.yaml"
   _http_port:=18765 _output_file:="${RUNTIME}/extrinsics.yaml" \
   >"${RUNTIME}/web.log" 2>&1 &
 WEB_PID="$!"
-for _ in $(seq 1 50); do
-  if python3 -c 'import json, sys, urllib.request; payload=json.load(urllib.request.urlopen("http://127.0.0.1:18765/healthz", timeout=1)); sys.exit(0 if payload["status"] == "ok" and payload["image_ready"] and payload["camera_info_ready"] else 1)' >/dev/null 2>&1; then break; fi
+WEB_READY=false
+for _ in $(seq 1 150); do
+  if python3 -c 'import json, sys, urllib.request; payload=json.load(urllib.request.urlopen("http://127.0.0.1:18765/healthz", timeout=1)); sys.exit(0 if payload["status"] == "ok" and payload["image_ready"] and payload["camera_info_ready"] else 1)' >/dev/null 2>&1; then
+    WEB_READY=true
+    break
+  fi
+  if ! kill -0 "${WEB_PID}" 2>/dev/null; then
+    break
+  fi
   sleep 0.1
 done
+if [[ "${WEB_READY}" != true ]]; then
+  echo "Installed calibration WebUI did not become ready" >&2
+  for log_file in web driver roscore; do
+    echo "--- ${log_file}.log ---" >&2
+    sed -n '1,240p' "${RUNTIME}/${log_file}.log" >&2 || true
+  done
+  exit 1
+fi
 python3 -c 'import json, urllib.request; payload=json.load(urllib.request.urlopen("http://127.0.0.1:18765/healthz", timeout=2)); assert payload["status"] == "ok" and payload["image_ready"] and payload["camera_info_ready"]'
 python3 -c 'import urllib.request; payload=urllib.request.urlopen("http://127.0.0.1:18765/", timeout=2).read(); assert b"Camera extrinsic calibration" in payload'
 
