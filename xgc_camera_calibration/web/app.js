@@ -354,4 +354,99 @@ async function tickLiveFrame() {
 
 refreshState();
 state.stateTimer = window.setInterval(refreshState, 1000);
+
+/* ---------------- Intrinsic mode ---------------- */
+const intrinsic = {
+  view: document.getElementById("intrinsic-view"),
+  extView: document.getElementById("extrinsic-view"),
+  image: document.getElementById("intrinsic-image"),
+  bars: document.getElementById("intrinsic-bars"),
+  samples: document.getElementById("intrinsic-samples"),
+  calibrate: document.getElementById("intrinsic-calibrate"),
+  reset: document.getElementById("intrinsic-reset"),
+  result: document.getElementById("intrinsic-result"),
+  status: document.getElementById("intrinsic-status"),
+};
+let activeMode = "intrinsic";
+
+function setMode(next) {
+  activeMode = next;
+  document.querySelectorAll(".tab[data-mode]").forEach((tab) =>
+    tab.classList.toggle("active", tab.dataset.mode === next));
+  intrinsic.view.classList.toggle("hidden", next !== "intrinsic");
+  intrinsic.extView.classList.toggle("hidden", next !== "extrinsic");
+  if (next === "intrinsic") { pollIntrinsic(); refreshIntrinsicImage(); }
+}
+
+function renderIntrinsicBars(bars) {
+  if (intrinsic.bars.childElementCount !== bars.length) {
+    intrinsic.bars.innerHTML = bars.map((bar) =>
+      `<div class="bar"><div class="bar-label"><span>${bar.label}</span><span class="pct"></span></div>` +
+      `<div class="bar-track"><div class="bar-fill"></div></div></div>`).join("");
+  }
+  bars.forEach((bar, index) => {
+    const wrap = intrinsic.bars.children[index];
+    const pct = Math.round(bar.progress * 100);
+    const fill = wrap.querySelector(".bar-fill");
+    fill.style.width = Math.min(100, pct) + "%";
+    fill.classList.toggle("full", bar.progress >= 1);
+    wrap.querySelector(".pct").textContent = pct + "%";
+  });
+}
+
+async function pollIntrinsic() {
+  if (activeMode !== "intrinsic") return;
+  let snapshot;
+  try {
+    snapshot = await api("/api/v1/intrinsic/state");
+  } catch (error) {
+    intrinsic.status.textContent = "Intrinsic calibration unavailable";
+    return;
+  }
+  intrinsic.samples.textContent = `${snapshot.samples} samples`;
+  renderIntrinsicBars(snapshot.coverage || []);
+  intrinsic.calibrate.disabled = !(snapshot.goodenough && !snapshot.calibrated);
+  if (snapshot.result) {
+    const r = snapshot.result;
+    intrinsic.result.hidden = false;
+    intrinsic.result.textContent =
+      `fx = ${r.fx.toFixed(2)}   fy = ${r.fy.toFixed(2)}\n` +
+      `cx = ${r.cx.toFixed(2)}   cy = ${r.cy.toFixed(2)}\n` +
+      `rms = ${r.rms_reprojection_error_px.toFixed(3)} px   (${r.sample_count} samples)\n` +
+      `saved: ${r.output_file}`;
+  } else {
+    intrinsic.result.hidden = true;
+  }
+}
+
+function refreshIntrinsicImage() {
+  if (activeMode !== "intrinsic") return;
+  intrinsic.image.src = "/api/v1/intrinsic/image.jpg?t=" + Date.now();
+}
+
+intrinsic.calibrate.addEventListener("click", async () => {
+  intrinsic.status.textContent = "Calibrating…";
+  try {
+    await post("/api/v1/intrinsic/calibrate");
+    intrinsic.status.textContent = "Calibrated and saved.";
+  } catch (error) {
+    intrinsic.status.textContent = error.message;
+  }
+  pollIntrinsic();
+});
+intrinsic.reset.addEventListener("click", async () => {
+  try {
+    await post("/api/v1/intrinsic/reset");
+    intrinsic.status.textContent = "Coverage reset.";
+  } catch (error) {
+    intrinsic.status.textContent = error.message;
+  }
+  pollIntrinsic();
+});
+document.querySelectorAll(".tab[data-mode]").forEach((tab) =>
+  tab.addEventListener("click", () => setMode(tab.dataset.mode)));
+
+window.setInterval(pollIntrinsic, 700);
+window.setInterval(refreshIntrinsicImage, 500);
+setMode("intrinsic");
 state.liveTimer = window.setInterval(tickLiveFrame, 500);
