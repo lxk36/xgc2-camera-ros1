@@ -101,7 +101,8 @@ build_calibration() {
     $'Provides: ros-noetic-xgc-camera-calibration\nConflicts: ros-noetic-xgc-camera-calibration\nReplaces: ros-noetic-xgc-camera-calibration\n'
   test -f "${package_root}${PREFIX}/lib/python3/dist-packages/xgc_camera_calibration/solver.py"
   test -f "${package_root}${PREFIX}/lib/python3/dist-packages/xgc_camera_calibration/web_service.py"
-  test -f "${package_root}${PREFIX}/share/xgc_camera_calibration/web/index.html"
+  test -f "${package_root}${PREFIX}/share/xgc_camera_calibration/web/intrinsic/index.html"
+  test -f "${package_root}${PREFIX}/share/xgc_camera_calibration/web/extrinsic/index.html"
   find "${package_root}" -type d -name __pycache__ -prune -exec rm -rf {} +
   find "${package_root}" -type d -exec chmod 0755 {} +
   find "${package_root}" -type f -exec chmod 0644 {} +
