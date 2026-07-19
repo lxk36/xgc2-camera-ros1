@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""ROS1 camera/pose adapter and HTTP entrypoint for extrinsic calibration."""
+"""ROS1 camera/pose adapter and HTTP entrypoint for the unified camera calibrator.
+
+Serves both intrinsic and extrinsic calibration from a single node and HTTP
+server: the extrinsic path freezes a synchronized frame and solves PnP against
+tracked markers, while the intrinsic path streams the same camera frames into an
+auto-collecting chessboard session.  A throttled feeder thread pushes the latest
+frame into the intrinsic service so 4K board detection never stalls image
+delivery or the extrinsic freeze path.
+"""
 
 import re
 import sys
@@ -14,6 +22,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import CameraInfo, Image
 
+from xgc_camera_calibration.intrinsic_service import IntrinsicCalibrationService
 from xgc_camera_calibration.web_service import (
     ApiError,
     CalibrationHttpServer,
@@ -242,20 +251,35 @@ def split_list_parameter(value):
     return [item.strip() for item in str(value).split(",") if item.strip()]
 
 
+def intrinsic_feeder(source, intrinsic_service, rate_hz, stop_event):
+    """Push the latest camera frame into the intrinsic session at a fixed rate.
+
+    Runs off the subscriber thread and reuses the shared latest-frame buffer, so
+    it adds no second subscription and never blocks image delivery.  Broad
+    exception handling keeps the feeder alive across transient conversion errors.
+    """
+    rate = rospy.Rate(rate_hz if rate_hz > 0.0 else 1.0)
+    while not rospy.is_shutdown() and not stop_event.is_set():
+        try:
+            frame = source.preview_image()
+            if frame is not None:
+                intrinsic_service.process_frame(frame)
+        except Exception as error:
+            rospy.logwarn_throttle(10.0, "Intrinsic feeder skipped a frame: %s", error)
+        rate.sleep()
+
+
 def main():
-    rospy.init_node("xgc_camera_extrinsic_calibrator_web")
+    rospy.init_node("xgc_camera_calibrator_web")
     try:
         source = RosCalibrationSource()
         package_root = Path(rospkg.RosPack().get_path("xgc_camera_calibration"))
         web_root = Path(rospy.get_param("~web_root", str(package_root / "web")))
+        calibrations = Path.home() / ".local/state/xgc2/camera/calibrations/usb_cam"
         service = CalibrationService(
             source,
             output_file=rospy.get_param(
-                "~output_file",
-                str(
-                    Path.home()
-                    / ".local/state/xgc2/camera/calibrations/usb_cam/extrinsics.yaml"
-                ),
+                "~output_file", str(calibrations / "extrinsics.yaml")
             ),
             parent_frame=rospy.get_param("~parent_frame", "map"),
             child_frame=rospy.get_param("~child_frame", "usb_cam_optical_frame"),
@@ -265,6 +289,21 @@ def main():
                 rospy.get_param("~maximum_inlier_error_px", 5.0)
             ),
             jpeg_quality=int(rospy.get_param("~jpeg_quality", 80)),
+        )
+        # Interior corners for the shared checkerboard_8x6 model (8x6 squares).
+        intrinsic_service = IntrinsicCalibrationService(
+            board_size=(
+                int(rospy.get_param("~intrinsic_board_cols", 7)),
+                int(rospy.get_param("~intrinsic_board_rows", 5)),
+            ),
+            square=float(rospy.get_param("~intrinsic_square_size", 0.20)),
+            output_file=rospy.get_param(
+                "~intrinsic_output_file", str(calibrations / "intrinsics.yaml")
+            ),
+            image_topic=source.image_topic,
+            camera_info_topic=source.camera_info_topic,
+            jpeg_quality=int(rospy.get_param("~jpeg_quality", 80)),
+            display_width=int(rospy.get_param("~intrinsic_display_width", 720)),
         )
         bind_address = str(rospy.get_param("~bind_address", "127.0.0.1"))
         http_port = int(rospy.get_param("~http_port", 8765))
@@ -284,19 +323,28 @@ def main():
                 rospy.get_param("~allowed_origins", [])
             ),
             logger=lambda message: rospy.logdebug("Web calibrator: %s", message),
+            intrinsic_service=intrinsic_service,
         )
     except Exception as error:
-        rospy.logfatal("Could not start camera extrinsic WebUI: %s", error)
+        rospy.logfatal("Could not start camera calibration WebUI: %s", error)
         return 1
 
+    stop_event = threading.Event()
     server_thread = threading.Thread(
         target=server.serve_forever,
         name="camera-calibration-http",
         daemon=True,
     )
+    feeder_thread = threading.Thread(
+        target=intrinsic_feeder,
+        args=(source, intrinsic_service, float(rospy.get_param("~intrinsic_rate", 6.0)), stop_event),
+        name="camera-calibration-intrinsic-feeder",
+        daemon=True,
+    )
     server_thread.start()
+    feeder_thread.start()
     rospy.loginfo(
-        "Camera extrinsic WebUI listening on http://%s:%d (image=%s, poses=%s)",
+        "Camera calibration WebUI (intrinsic + extrinsic) on http://%s:%d (image=%s, poses=%s)",
         bind_address,
         http_port,
         source.image_topic,
@@ -305,9 +353,11 @@ def main():
     try:
         rospy.spin()
     finally:
+        stop_event.set()
         server.shutdown()
         server.server_close()
         server_thread.join(timeout=5.0)
+        feeder_thread.join(timeout=5.0)
     return 0
 
 

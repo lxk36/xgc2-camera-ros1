@@ -65,11 +65,11 @@ plugin = json.loads(plugin_path.read_text(encoding="utf-8"))
 assert plugin["apiVersion"] == "xgc.execution.process/v1"
 definitions = plugin["definitions"]
 ids = [definition["id"] for definition in definitions]
-assert len(ids) == len(set(ids)) == 4
+assert len(ids) == len(set(ids)) == 3
 driver = next(item for item in definitions if item["id"] == "xgc2-camera-v4l2-ros1")
-extrinsic = next(
+calibrator = next(
     item for item in definitions
-    if item["id"] == "xgc2-camera-extrinsic-calibrator-ros1"
+    if item["id"] == "xgc2-camera-calibrator-ros1"
 )
 for probe_name in ("readiness", "liveness"):
     probe = driver[probe_name]
@@ -82,13 +82,16 @@ for probe_name in ("readiness", "liveness"):
 assert driver["command"]["executable"] == (
     "/opt/ros/noetic/lib/xgc_camera_driver/xgc_camera_driver_node"
 )
-assert extrinsic["version"] == "2.0.0"
-assert extrinsic["command"]["executable"] == (
-    "/opt/ros/noetic/lib/xgc_camera_calibration/extrinsic_calibrator_web.py"
+assert calibrator["version"] == "3.0.0"
+assert calibrator["command"]["executable"] == (
+    "/opt/ros/noetic/lib/xgc_camera_calibration/calibrator_web.py"
 )
-assert extrinsic["parameters"]["properties"]["bindAddress"]["default"] == "127.0.0.1"
-assert extrinsic["parameters"]["properties"]["httpPort"]["default"] == 8765
-assert "DISPLAY" not in extrinsic["command"]["env"]
+assert calibrator["parameters"]["properties"]["bindAddress"]["default"] == "127.0.0.1"
+assert calibrator["parameters"]["properties"]["httpPort"]["default"] == 8765
+assert calibrator["parameters"]["properties"]["intrinsicOutputFile"]["default"] == (
+    "/var/lib/xgc2/camera/calibrations/usb_cam/intrinsics.yaml"
+)
+assert "DISPLAY" not in calibrator["command"]["env"]
 
 manifest_paths = list(
     (pathlib.Path(os.environ["MANIFEST_TEST_ROOT"]) / "manifests").glob("*.json")

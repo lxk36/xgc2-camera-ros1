@@ -12,8 +12,7 @@ dpkg -s ros-noetic-xgc2-camera-calibration >/dev/null
 test "$(rospack find xgc_camera_driver)" = "${PREFIX}/share/xgc_camera_driver"
 test "$(rospack find xgc_camera_calibration)" = "${PREFIX}/share/xgc_camera_calibration"
 test -x "${DRIVER}"
-test -x "${PREFIX}/lib/xgc_camera_calibration/run_intrinsic_calibrator.py"
-test -x "${PREFIX}/lib/xgc_camera_calibration/extrinsic_calibrator_web.py"
+test -x "${PREFIX}/lib/xgc_camera_calibration/calibrator_web.py"
 test -x "${PREFIX}/lib/xgc_camera_calibration/extrinsic_tf_publisher.py"
 test -f "${PREFIX}/share/xgc_camera_calibration/web/index.html"
 test -f "${PREFIX}/share/xgc_camera_calibration/web/app.js"
@@ -23,8 +22,7 @@ python3 -m json.tool "${PLUGIN}" >/dev/null
 python3 -c 'from xgc_camera_calibration.solver import solve_extrinsic; from xgc_camera_calibration.transforms import split_parent_to_optical_pose; from xgc_camera_calibration.web_service import CalibrationService'
 roslaunch --files xgc_camera_driver camera.launch >/dev/null
 roslaunch --files xgc_camera_driver usb_cam_compat.launch >/dev/null
-roslaunch --files xgc_camera_calibration intrinsic_calibrator.launch >/dev/null
-roslaunch --files xgc_camera_calibration extrinsic_calibrator.launch >/dev/null
+roslaunch --files xgc_camera_calibration calibrator.launch >/dev/null
 roslaunch --files xgc_camera_calibration extrinsic_tf.launch >/dev/null
 if ldd "${DRIVER}" | grep -q 'not found'; then
   ldd "${DRIVER}" >&2
@@ -67,8 +65,8 @@ timeout 15 rostopic echo -n 1 /usb_cam/camera_info/header/stamp >/dev/null
 test "$(rostopic type /usb_cam/image_raw)" = "sensor_msgs/Image"
 test "$(rostopic type /usb_cam/camera_info)" = "sensor_msgs/CameraInfo"
 grep -q '^secs:' "${RUNTIME}/stamp.yaml"
-"${PREFIX}/lib/xgc_camera_calibration/extrinsic_calibrator_web.py" \
-  __name:=xgc_camera_extrinsic_calibrator_web \
+"${PREFIX}/lib/xgc_camera_calibration/calibrator_web.py" \
+  __name:=xgc_camera_calibrator_web \
   _image_topic:=/usb_cam/image_raw _camera_info_topic:=/usb_cam/camera_info \
   _http_port:=18765 _output_file:="${RUNTIME}/extrinsics.yaml" \
   >"${RUNTIME}/web.log" 2>&1 &
@@ -93,6 +91,6 @@ if [[ "${WEB_READY}" != true ]]; then
   exit 1
 fi
 python3 -c 'import json, urllib.request; payload=json.load(urllib.request.urlopen("http://127.0.0.1:18765/healthz", timeout=2)); assert payload["status"] == "ok" and payload["image_ready"] and payload["camera_info_ready"]'
-python3 -c 'import urllib.request; payload=urllib.request.urlopen("http://127.0.0.1:18765/", timeout=2).read(); assert b"Camera extrinsic calibration" in payload'
+python3 -c 'import urllib.request; payload=urllib.request.urlopen("http://127.0.0.1:18765/", timeout=2).read(); assert b"Camera calibration" in payload'
 
 echo "Installed ROS1 camera packages, synthetic topics, and calibration WebUI passed"

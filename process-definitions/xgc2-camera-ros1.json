@@ -96,52 +96,10 @@
       "restart": {"mode": "on-failure", "maxRestarts": 3, "backoff": 1000000000}
     },
     {
-      "id": "xgc2-camera-intrinsic-calibrator-ros1",
-      "version": "1.0.0",
-      "label": "XGC2 camera intrinsic calibration",
-      "description": "Open the Noetic camera_calibration UI and collect ost.yaml into a runtime asset directory.",
-      "drivers": ["host"],
-      "parameters": {
-        "properties": {
-          "imageTopic": {"type": "string", "default": "/usb_cam/image_raw"},
-          "cameraNamespace": {"type": "string", "default": "/usb_cam"},
-          "cameraName": {"type": "string", "default": "usb_cam"},
-          "boardSize": {"type": "string", "default": "11x8"},
-          "squareSize": {"type": "number", "default": 0.03, "minimum": 0.000001},
-          "outputDir": {"type": "string", "default": "/var/lib/xgc2/camera/calibrations/usb_cam/intrinsic"},
-          "outputFile": {"type": "string", "default": "/var/lib/xgc2/camera/calibrations/usb_cam/intrinsics.yaml"},
-          "display": {"type": "string", "default": ":0"},
-          "rosMasterUri": {"type": "string", "default": "http://127.0.0.1:11311"},
-          "rosLogDir": {"type": "string", "default": "/var/lib/xgc2/ros/log/camera-calibration"}
-        },
-        "additionalProperties": false
-      },
-      "command": {
-        "executable": "/opt/ros/noetic/lib/xgc_camera_calibration/run_intrinsic_calibrator.py",
-        "args": ["--image-topic", "${imageTopic}", "--camera-namespace", "${cameraNamespace}", "--camera-name", "${cameraName}", "--board-size", "${boardSize}", "--square-size", "${squareSize}", "--output-dir", "${outputDir}", "--output-file", "${outputFile}"],
-        "env": {
-          "DISPLAY": "${display}",
-          "ROS_MASTER_URI": "${rosMasterUri}",
-          "ROS_LOG_DIR": "${rosLogDir}",
-          "ROS_DISTRO": "noetic",
-          "ROS_VERSION": "1",
-          "ROS_PYTHON_VERSION": "3",
-          "ROS_ROOT": "/opt/ros/noetic/share/ros",
-          "ROS_PACKAGE_PATH": "/opt/ros/noetic/share",
-          "PYTHONPATH": "/opt/ros/noetic/lib/python3/dist-packages",
-          "PATH": "/opt/ros/noetic/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-        }
-      },
-      "readiness": {"kind": "process"},
-      "liveness": {"kind": "process"},
-      "stop": {"gracePeriod": 5000000000},
-      "restart": {"mode": "never"}
-    },
-    {
-      "id": "xgc2-camera-extrinsic-calibrator-ros1",
-      "version": "2.0.0",
-      "label": "XGC2 camera extrinsic calibration WebUI",
-      "description": "Serve a local WebUI that matches synchronized pose markers to pixels, solves robust PnP, and persists parent_T_camera_optical.",
+      "id": "xgc2-camera-calibrator-ros1",
+      "version": "3.0.0",
+      "label": "XGC2 camera calibration WebUI",
+      "description": "Serve one local WebUI for both intrinsic and extrinsic calibration: auto-collect diverse chessboard views and solve intrinsics, then match synchronized pose markers to pixels, solve robust PnP, and persist parent_T_camera_optical.",
       "drivers": ["host"],
       "parameters": {
         "properties": {
@@ -149,11 +107,17 @@
           "cameraInfoTopic": {"type": "string", "default": "/usb_cam/camera_info"},
           "posePrefix": {"type": "string", "default": "/vrpn_client_node"},
           "outputFile": {"type": "string", "default": "/var/lib/xgc2/camera/calibrations/usb_cam/extrinsics.yaml"},
+          "intrinsicOutputFile": {"type": "string", "default": "/var/lib/xgc2/camera/calibrations/usb_cam/intrinsics.yaml"},
           "parentFrame": {"type": "string", "default": "map"},
           "opticalFrame": {"type": "string", "default": "usb_cam_optical_frame"},
           "maximumMarkerAge": {"type": "number", "default": 0.1, "minimum": 0.0},
           "maximumErrorPx": {"type": "number", "default": 5.0, "minimum": 0.0},
           "poseHistorySize": {"type": "integer", "default": 240, "minimum": 2, "maximum": 10000},
+          "intrinsicBoardCols": {"type": "integer", "default": 7, "minimum": 2, "maximum": 100},
+          "intrinsicBoardRows": {"type": "integer", "default": 5, "minimum": 2, "maximum": 100},
+          "intrinsicSquareSize": {"type": "number", "default": 0.2, "minimum": 0.000001},
+          "intrinsicDisplayWidth": {"type": "integer", "default": 720, "minimum": 64, "maximum": 16384},
+          "intrinsicRate": {"type": "number", "default": 6.0, "minimum": 0.1, "maximum": 120.0},
           "jpegQuality": {"type": "integer", "default": 80, "minimum": 1, "maximum": 100},
           "bindAddress": {"type": "string", "default": "127.0.0.1"},
           "httpPort": {"type": "integer", "default": 8765, "minimum": 1, "maximum": 65535},
@@ -165,8 +129,8 @@
         "additionalProperties": false
       },
       "command": {
-        "executable": "/opt/ros/noetic/lib/xgc_camera_calibration/extrinsic_calibrator_web.py",
-        "args": ["__name:=xgc_camera_extrinsic_calibrator_web", "_image_topic:=${imageTopic}", "_camera_info_topic:=${cameraInfoTopic}", "_pose_prefix:=${posePrefix}", "_output_file:=${outputFile}", "_parent_frame:=${parentFrame}", "_child_frame:=${opticalFrame}", "_maximum_marker_age:=${maximumMarkerAge}", "_maximum_inlier_error_px:=${maximumErrorPx}", "_pose_history_size:=${poseHistorySize}", "_jpeg_quality:=${jpegQuality}", "_bind_address:=${bindAddress}", "_http_port:=${httpPort}", "_frame_ancestors:=${frameAncestors}", "_allowed_origins:=${allowedOrigins}"],
+        "executable": "/opt/ros/noetic/lib/xgc_camera_calibration/calibrator_web.py",
+        "args": ["__name:=xgc_camera_calibrator_web", "_image_topic:=${imageTopic}", "_camera_info_topic:=${cameraInfoTopic}", "_pose_prefix:=${posePrefix}", "_output_file:=${outputFile}", "_intrinsic_output_file:=${intrinsicOutputFile}", "_parent_frame:=${parentFrame}", "_child_frame:=${opticalFrame}", "_maximum_marker_age:=${maximumMarkerAge}", "_maximum_inlier_error_px:=${maximumErrorPx}", "_pose_history_size:=${poseHistorySize}", "_intrinsic_board_cols:=${intrinsicBoardCols}", "_intrinsic_board_rows:=${intrinsicBoardRows}", "_intrinsic_square_size:=${intrinsicSquareSize}", "_intrinsic_display_width:=${intrinsicDisplayWidth}", "_intrinsic_rate:=${intrinsicRate}", "_jpeg_quality:=${jpegQuality}", "_bind_address:=${bindAddress}", "_http_port:=${httpPort}", "_frame_ancestors:=${frameAncestors}", "_allowed_origins:=${allowedOrigins}"],
         "env": {
           "ROS_MASTER_URI": "${rosMasterUri}",
           "ROS_LOG_DIR": "${rosLogDir}",

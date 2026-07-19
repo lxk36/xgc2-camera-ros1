@@ -6,9 +6,8 @@ catkin_python_setup()
 catkin_package()
 
 catkin_install_python(PROGRAMS
-  scripts/extrinsic_calibrator_web.py
+  scripts/calibrator_web.py
   scripts/extrinsic_tf_publisher.py
-  scripts/run_intrinsic_calibrator.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 install(DIRECTORY launch
@@ -22,6 +21,5 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_solver.py)
   catkin_add_nosetests(test/test_intrinsic_solver.py)
   catkin_add_nosetests(test/test_intrinsic_service.py)
-  catkin_add_nosetests(test/test_intrinsic_wrapper.py)
   catkin_add_nosetests(test/test_web_service.py)
 endif()
