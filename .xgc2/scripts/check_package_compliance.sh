@@ -127,7 +127,7 @@ PY
 
 grep -q '^id: xgc2-camera-ros1$' .xgc2/product.yml
 grep -q '^version: 0.2.0-2$' .xgc2/product.yml
-grep -q '^    focal: 0.2.0-1$' .xgc2/product.yml
+grep -q '^    focal: 0.2.0-2$' .xgc2/product.yml
 if grep -q '^    focal: .*~focal' .xgc2/product.yml; then
   echo "single-distribution ROS1 package version must not retain a focal suffix" >&2
   exit 1
