@@ -434,6 +434,7 @@ class CalibrationHttpServer(ThreadingHTTPServer):
         frame_ancestors: str,
         allowed_origins: Sequence[str] = (),
         logger: Optional[Callable[[str], None]] = None,
+        intrinsic_service: Optional[Any] = None,
     ):
         root = Path(web_root).resolve()
         for required in ("index.html", "app.js", "styles.css"):
@@ -442,6 +443,7 @@ class CalibrationHttpServer(ThreadingHTTPServer):
         if "\r" in frame_ancestors or "\n" in frame_ancestors:
             raise ValueError("frame_ancestors must not contain newlines")
         self.service = service
+        self.intrinsic_service = intrinsic_service
         self.web_root = root
         self.frame_ancestors = frame_ancestors.strip() or "'self'"
         self.allowed_origins = set(allowed_origins)
@@ -526,6 +528,12 @@ class CalibrationRequestHandler(BaseHTTPRequestHandler):
         except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise ApiError(HTTPStatus.BAD_REQUEST, "Request body is not valid JSON") from error
 
+    def _intrinsic(self) -> Any:
+        service = self.calibration_server.intrinsic_service
+        if service is None:
+            raise ApiError(HTTPStatus.NOT_FOUND, "Intrinsic calibration is not enabled")
+        return service
+
     def _dispatch(self) -> None:
         path = urlsplit(self.path).path
         service = self.calibration_server.service
@@ -547,6 +555,12 @@ class CalibrationRequestHandler(BaseHTTPRequestHandler):
                 return
             if path == "/api/v1/image.jpg":
                 self._send_bytes(HTTPStatus.OK, "image/jpeg", service.image_jpeg())
+                return
+            if path == "/api/v1/intrinsic/state":
+                self._send_json(HTTPStatus.OK, self._intrinsic().state())
+                return
+            if path == "/api/v1/intrinsic/image.jpg":
+                self._send_bytes(HTTPStatus.OK, "image/jpeg", self._intrinsic().image_jpeg())
                 return
             asset = self.static_files.get(path)
             if asset:
@@ -574,6 +588,16 @@ class CalibrationRequestHandler(BaseHTTPRequestHandler):
                 return
             if path == "/api/v1/solve":
                 self._send_json(HTTPStatus.OK, service.solve(request))
+                return
+            if path == "/api/v1/intrinsic/calibrate":
+                if request not in ({}, None):
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "Calibrate request must be an empty object")
+                self._send_json(HTTPStatus.OK, self._intrinsic().calibrate())
+                return
+            if path == "/api/v1/intrinsic/reset":
+                if request not in ({}, None):
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "Reset request must be an empty object")
+                self._send_json(HTTPStatus.OK, self._intrinsic().reset())
                 return
             raise ApiError(HTTPStatus.NOT_FOUND, "Route not found")
         raise ApiError(HTTPStatus.METHOD_NOT_ALLOWED, "Method not allowed")
