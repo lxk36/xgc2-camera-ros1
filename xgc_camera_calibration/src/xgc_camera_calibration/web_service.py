@@ -75,6 +75,52 @@ def nearest_observation(
     return observation, age
 
 
+def image_message_to_bgr(message: Any) -> np.ndarray:
+    """Convert common 8-bit sensor_msgs/Image encodings without cv_bridge."""
+    height = int(message.height)
+    width = int(message.width)
+    if height <= 0 or width <= 0:
+        raise ValueError("Image dimensions must be positive")
+
+    encoding = str(message.encoding).strip().lower()
+    formats = {
+        "bgr8": (3, None),
+        "8uc3": (3, None),
+        "rgb8": (3, cv2.COLOR_RGB2BGR),
+        "bgra8": (4, cv2.COLOR_BGRA2BGR),
+        "8uc4": (4, cv2.COLOR_BGRA2BGR),
+        "rgba8": (4, cv2.COLOR_RGBA2BGR),
+        "mono8": (1, cv2.COLOR_GRAY2BGR),
+        "8uc1": (1, cv2.COLOR_GRAY2BGR),
+    }
+    if encoding not in formats:
+        raise ValueError(
+            "Unsupported image encoding '{}'; expected an 8-bit color or mono image".format(
+                message.encoding
+            )
+        )
+    channels, conversion = formats[encoding]
+    row_bytes = width * channels
+    step = int(message.step)
+    if step < row_bytes:
+        raise ValueError("Image step is smaller than the encoded row width")
+
+    try:
+        raw = np.frombuffer(message.data, dtype=np.uint8)
+    except TypeError:
+        raw = np.asarray(message.data, dtype=np.uint8)
+    required = step * height
+    if raw.size < required:
+        raise ValueError("Image data is shorter than height * step")
+    rows = raw[:required].reshape(height, step)
+    image = rows[:, :row_bytes].reshape(height, width, channels).copy()
+    if channels == 1:
+        image = image.reshape(height, width)
+    if conversion is not None:
+        image = cv2.cvtColor(image, conversion)
+    return image
+
+
 def _finite_pixel(value: Any, name: str) -> Tuple[float, float]:
     if not isinstance(value, (list, tuple)) or len(value) != 2:
         raise ApiError(HTTPStatus.BAD_REQUEST, "{} must be a two-element array".format(name))

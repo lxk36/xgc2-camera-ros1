@@ -96,7 +96,7 @@ build_calibration() {
   mkdir -p "${package_root}"
   copy_ros_package xgc_camera_calibration "${package_root}"
   write_control "${package_root}" "${package_name}" \
-    "python3-numpy, python3-opencv, python3-rospkg, python3-yaml, ros-noetic-camera-calibration, ros-noetic-cv-bridge, ros-noetic-geometry-msgs, ros-noetic-rosbash, ros-noetic-roslaunch, ros-noetic-rospy, ros-noetic-sensor-msgs, ros-noetic-tf2-ros" \
+    "python3-numpy, python3-opencv, python3-rospkg, python3-yaml, ros-noetic-camera-calibration, ros-noetic-geometry-msgs, ros-noetic-rosbash, ros-noetic-roslaunch, ros-noetic-rospy, ros-noetic-sensor-msgs, ros-noetic-tf2-ros" \
     "XGC2 intrinsic tools and Python/WebUI assisted extrinsic camera calibration" \
     $'Provides: ros-noetic-xgc-camera-calibration\nConflicts: ros-noetic-xgc-camera-calibration\nReplaces: ros-noetic-xgc-camera-calibration\n'
   test -f "${package_root}${PREFIX}/lib/python3/dist-packages/xgc_camera_calibration/solver.py"

@@ -18,6 +18,7 @@ from xgc_camera_calibration.web_service import (
     CalibrationService,
     FrameSnapshot,
     MarkerObservation,
+    image_message_to_bgr,
     nearest_observation,
 )
 
@@ -159,6 +160,32 @@ class WebCalibrationServiceTest(unittest.TestCase):
         selected, age = nearest_observation(history, 11.0, 0.1)
         self.assertIsNone(selected)
         self.assertAlmostEqual(age, 0.6)
+
+    def test_converts_padded_rgb_and_mono_images_without_cv_bridge(self):
+        class Message:
+            pass
+
+        rgb = Message()
+        rgb.height = 1
+        rgb.width = 2
+        rgb.encoding = "rgb8"
+        rgb.step = 8
+        rgb.data = bytes([255, 0, 0, 0, 255, 0, 99, 99])
+        converted = image_message_to_bgr(rgb)
+        np.testing.assert_array_equal(
+            converted, np.array([[[0, 0, 255], [0, 255, 0]]], dtype=np.uint8)
+        )
+
+        mono = Message()
+        mono.height = 1
+        mono.width = 2
+        mono.encoding = "mono8"
+        mono.step = 2
+        mono.data = bytes([7, 201])
+        converted = image_message_to_bgr(mono)
+        np.testing.assert_array_equal(
+            converted, np.array([[[7, 7, 7], [201, 201, 201]]], dtype=np.uint8)
+        )
 
     def test_http_server_serves_assets_health_and_api(self):
         web_root = Path(__file__).resolve().parents[1] / "web"

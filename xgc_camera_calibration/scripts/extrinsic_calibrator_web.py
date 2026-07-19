@@ -7,10 +7,10 @@ import threading
 from collections import deque
 from pathlib import Path
 
+import cv2
 import numpy as np
 import rospkg
 import rospy
-from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import CameraInfo, Image
 
@@ -20,6 +20,7 @@ from xgc_camera_calibration.web_service import (
     CalibrationService,
     FrameSnapshot,
     MarkerObservation,
+    image_message_to_bgr,
     nearest_observation,
 )
 
@@ -34,7 +35,6 @@ class RosCalibrationSource:
 
     def __init__(self):
         self.lock = threading.RLock()
-        self.bridge = CvBridge()
         self.image_topic = normalize_topic(rospy.get_param("~image_topic", "/usb_cam/image_raw"))
         self.camera_info_topic = normalize_topic(
             rospy.get_param("~camera_info_topic", "/usb_cam/camera_info")
@@ -140,8 +140,8 @@ class RosCalibrationSource:
 
     def _convert_image(self, message):
         try:
-            return self.bridge.imgmsg_to_cv2(message, desired_encoding="bgr8")
-        except CvBridgeError as error:
+            return image_message_to_bgr(message)
+        except (TypeError, ValueError, cv2.error) as error:
             raise ApiError(409, "Could not convert camera image: {}".format(error)) from error
 
     def preview_image(self):

@@ -9,7 +9,6 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>python3-setuptools</build_depend>
   <exec_depend>camera_calibration</exec_depend>
-  <exec_depend>cv_bridge</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
