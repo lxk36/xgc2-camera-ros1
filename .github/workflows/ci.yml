@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build, test, and install-check both Debian packages
+      - name: Build, test, and install-check camera driver package
         run: |
           .xgc2/scripts/build_debs_in_docker.sh \
             --work-dir "$RUNNER_TEMP/xgc2-camera-ros1-${{ matrix.architecture }}" \

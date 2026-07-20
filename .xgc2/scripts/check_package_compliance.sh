@@ -10,9 +10,6 @@ for script in .xgc2/scripts/*.sh; do
 done
 
 PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/xgc2-camera-pycache" python3 -m py_compile \
-  xgc_camera_calibration/scripts/*.py \
-  xgc_camera_calibration/src/xgc_camera_calibration/*.py \
-  xgc_camera_calibration/test/*.py \
   xgc_camera_driver/test/*.py \
   .xgc2/scripts/xgc2_artifact_manifest.py
 
@@ -25,7 +22,7 @@ mkdir -p \
   "${MANIFEST_TEST_ROOT}/manifests"
 printf '%s\n' \
   'Package: xgc2-camera-manifest-contract' \
-  'Version: 0.2.0-1' \
+  'Version: 0.3.0-1' \
   'Section: misc' \
   'Priority: optional' \
   "Architecture: ${MANIFEST_TEST_ARCH}" \
@@ -34,13 +31,13 @@ printf '%s\n' \
   >"${MANIFEST_TEST_ROOT}/package/DEBIAN/control"
 dpkg-deb --build \
   "${MANIFEST_TEST_ROOT}/package" \
-  "${MANIFEST_TEST_ROOT}/debs/xgc2-camera-manifest-contract_0.2.0-1_${MANIFEST_TEST_ARCH}.deb" \
+  "${MANIFEST_TEST_ROOT}/debs/xgc2-camera-manifest-contract_0.3.0-1_${MANIFEST_TEST_ARCH}.deb" \
   >/dev/null
 python3 .xgc2/scripts/xgc2_artifact_manifest.py build \
   --deb-dir "${MANIFEST_TEST_ROOT}/debs" \
   --output-dir "${MANIFEST_TEST_ROOT}/manifests" \
   --product xgc2-camera-ros1 \
-  --product-version 0.2.0-1 \
+  --product-version 0.3.0-1 \
   --distribution focal \
   --architecture "${MANIFEST_TEST_ARCH}" \
   --source-sha 0000000000000000000000000000000000000000 \
@@ -60,21 +57,13 @@ for path in sorted(root.glob("xgc_camera_*/package.xml")):
 for path in sorted(root.glob("xgc_camera_*/*/*.launch")):
     ET.parse(path)
 
-plugin_path = root / "process-definitions/xgc2-camera-ros1.json"
+plugin_path = root / "process-definitions/xgc2-camera-driver-ros1.json"
 plugin = json.loads(plugin_path.read_text(encoding="utf-8"))
 assert plugin["apiVersion"] == "xgc.execution.process/v1"
 definitions = plugin["definitions"]
 ids = [definition["id"] for definition in definitions]
-assert len(ids) == len(set(ids)) == 4
+assert len(ids) == len(set(ids)) == 1
 driver = next(item for item in definitions if item["id"] == "xgc2-camera-v4l2-ros1")
-intrinsic = next(
-    item for item in definitions
-    if item["id"] == "xgc2-camera-intrinsic-calibrator-ros1"
-)
-extrinsic = next(
-    item for item in definitions
-    if item["id"] == "xgc2-camera-extrinsic-calibrator-ros1"
-)
 for probe_name in ("readiness", "liveness"):
     probe = driver[probe_name]
     assert probe["kind"] == "exec"
@@ -86,21 +75,6 @@ for probe_name in ("readiness", "liveness"):
 assert driver["command"]["executable"] == (
     "/opt/ros/noetic/lib/xgc_camera_driver/xgc_camera_driver_node"
 )
-assert extrinsic["version"] == "2.0.0"
-assert extrinsic["command"]["executable"] == (
-    "/opt/ros/noetic/lib/xgc_camera_calibration/extrinsic_calibrator_web.py"
-)
-assert extrinsic["parameters"]["properties"]["bindAddress"]["default"] == "127.0.0.1"
-assert extrinsic["parameters"]["properties"]["httpPort"]["default"] == 8765
-assert "DISPLAY" not in extrinsic["command"]["env"]
-assert intrinsic["version"] == "2.0.0"
-assert intrinsic["command"]["executable"] == (
-    "/opt/ros/noetic/lib/xgc_camera_calibration/intrinsic_calibrator_web.py"
-)
-assert intrinsic["parameters"]["properties"]["httpPort"]["default"] == 8766
-assert intrinsic["parameters"]["properties"]["cameraControl"]["default"] is False
-assert "DISPLAY" not in intrinsic["command"]["env"]
-
 manifest_paths = list(
     (pathlib.Path(os.environ["MANIFEST_TEST_ROOT"]) / "manifests").glob("*.json")
 )
@@ -112,7 +86,7 @@ assert set(manifest) == {
 }
 assert manifest["schema"] == "xgc2.build-artifact.v1"
 assert manifest["product"] == "xgc2-camera-ros1"
-assert manifest["version"] == "0.2.0-1"
+assert manifest["version"] == "0.3.0-1"
 assert set(manifest["ci"]) == {"run_id", "workflow", "workflow_ref"}
 assert len(manifest["debs"]) == 1
 deb = manifest["debs"][0]
@@ -120,14 +94,14 @@ assert set(deb) == {
     "file", "package", "version", "architecture", "sha256", "size",
 }
 assert deb["package"] == "xgc2-camera-manifest-contract"
-assert deb["version"] == "0.2.0-1"
+assert deb["version"] == "0.3.0-1"
 assert len(deb["sha256"]) == 64
 assert deb["size"] > 0
 PY
 
 grep -q '^id: xgc2-camera-ros1$' .xgc2/product.yml
-grep -q '^version: 0.2.0-2$' .xgc2/product.yml
-grep -q '^    focal: 0.2.0-2$' .xgc2/product.yml
+grep -q '^version: 0.3.0-1$' .xgc2/product.yml
+grep -q '^    focal: 0.3.0-1$' .xgc2/product.yml
 if grep -q '^    focal: .*~focal' .xgc2/product.yml; then
   echo "single-distribution ROS1 package version must not retain a focal suffix" >&2
   exit 1
@@ -136,22 +110,11 @@ grep -q 'xgc2::camera' xgc_camera_driver/CMakeLists.txt
 grep -q '/usr/share/xgc2/process-definitions' xgc_camera_driver/CMakeLists.txt
 grep -q '/workspace/repo/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
 grep -q '/workspace/work/src/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
-for page in extrinsic intrinsic; do
-  test -f "xgc_camera_calibration/web/${page}/index.html"
-  test -f "xgc_camera_calibration/web/${page}/app.js"
-  test -f "xgc_camera_calibration/web/${page}/styles.css"
-done
-if grep -R --exclude-dir=__pycache__ -E '(PyQt|python3-pyqt5|extrinsic_calibrator_ui)' \
-  process-definitions xgc_camera_calibration README.md \
-  .xgc2/product.yml .xgc2/scripts/package_debs.sh \
-  .xgc2/scripts/build_debs_in_docker.sh \
+if grep -R -E 'xgc_camera_calibration|xgc2-camera-(intrinsic|extrinsic)|xgc2-camera-calibration-ros1.json' \
+  process-definitions xgc_camera_driver .xgc2/product.yml \
+  .xgc2/scripts/build_debs_in_docker.sh .xgc2/scripts/package_debs.sh \
   .xgc2/scripts/check_installed_packages.sh >/dev/null; then
-  echo "desktop Qt dependency leaked into the WebUI camera calibrator" >&2
-  exit 1
-fi
-if grep -R -E -i '(fs150|scout|agilex)' \
-  README.md process-definitions xgc_camera_driver xgc_camera_calibration >/dev/null; then
-  echo "vehicle-specific integration leaked into the independent camera product" >&2
+  echo "calibration implementation leaked into the ROS camera driver product" >&2
   exit 1
 fi
 

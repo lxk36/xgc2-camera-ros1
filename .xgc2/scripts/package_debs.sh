@@ -77,12 +77,12 @@ build_driver() {
   local package_root="${BUILD_ROOT}/${package_name}"
   mkdir -p "${package_root}"
   copy_ros_package xgc_camera_driver "${package_root}"
-  copy_path "${INSTALL_ROOT}/usr/share/xgc2/process-definitions/xgc2-camera-ros1.json" "${package_root}"
+  copy_path "${INSTALL_ROOT}/usr/share/xgc2/process-definitions/xgc2-camera-driver-ros1.json" "${package_root}"
   write_control "${package_root}" "${package_name}" \
     "libavcodec58, libavutil56, libopencv-core4.2, libopencv-imgcodecs4.2, libopencv-imgproc4.2, libswscale5, libxgc2-camera-dev (>= 0.1.0-1~focal), ros-noetic-camera-info-manager, ros-noetic-cv-bridge, ros-noetic-diagnostic-msgs, ros-noetic-diagnostic-updater, ros-noetic-image-transport, ros-noetic-roscpp, ros-noetic-roslaunch, ros-noetic-rostopic, ros-noetic-sensor-msgs" \
     "XGC2 ROS Noetic adapter for the independent Linux camera core"
   test -x "${package_root}${PREFIX}/lib/xgc_camera_driver/xgc_camera_driver_node"
-  test -f "${package_root}/usr/share/xgc2/process-definitions/xgc2-camera-ros1.json"
+  test -f "${package_root}/usr/share/xgc2/process-definitions/xgc2-camera-driver-ros1.json"
   find "${package_root}" -type d -exec chmod 0755 {} +
   find "${package_root}" -type f -exec chmod 0644 {} +
   chmod 0755 "${package_root}${PREFIX}/lib/xgc_camera_driver/xgc_camera_driver_node"
@@ -90,28 +90,5 @@ build_driver() {
   fakeroot dpkg-deb --build "${package_root}" "${OUTPUT_DIR}/${package_name}_${VERSION}_${ARCH}.deb" >/dev/null
 }
 
-build_calibration() {
-  local package_name="ros-noetic-xgc2-camera-calibration"
-  local package_root="${BUILD_ROOT}/${package_name}"
-  mkdir -p "${package_root}"
-  copy_ros_package xgc_camera_calibration "${package_root}"
-  write_control "${package_root}" "${package_name}" \
-    "python3-numpy, python3-opencv, python3-rospkg, python3-yaml, ros-noetic-camera-calibration, ros-noetic-geometry-msgs, ros-noetic-rosbash, ros-noetic-roslaunch, ros-noetic-rospy, ros-noetic-sensor-msgs, ros-noetic-tf2-ros" \
-    "XGC2 intrinsic tools and Python/WebUI assisted extrinsic camera calibration" \
-    $'Provides: ros-noetic-xgc-camera-calibration\nConflicts: ros-noetic-xgc-camera-calibration\nReplaces: ros-noetic-xgc-camera-calibration\n'
-  test -f "${package_root}${PREFIX}/lib/python3/dist-packages/xgc_camera_calibration/solver.py"
-  test -f "${package_root}${PREFIX}/lib/python3/dist-packages/xgc_camera_calibration/web_service.py"
-  test -f "${package_root}${PREFIX}/share/xgc_camera_calibration/web/intrinsic/index.html"
-  test -f "${package_root}${PREFIX}/share/xgc_camera_calibration/web/extrinsic/index.html"
-  find "${package_root}" -type d -name __pycache__ -prune -exec rm -rf {} +
-  find "${package_root}" -type d -exec chmod 0755 {} +
-  find "${package_root}" -type f -exec chmod 0644 {} +
-  if [[ -d "${package_root}${PREFIX}/lib/xgc_camera_calibration" ]]; then
-    find "${package_root}${PREFIX}/lib/xgc_camera_calibration" -type f -exec chmod 0755 {} +
-  fi
-  fakeroot dpkg-deb --build "${package_root}" "${OUTPUT_DIR}/${package_name}_${VERSION}_${ARCH}.deb" >/dev/null
-}
-
 build_driver
-build_calibration
 find "${OUTPUT_DIR}" -maxdepth 1 -type f -name '*.deb' -print | sort
