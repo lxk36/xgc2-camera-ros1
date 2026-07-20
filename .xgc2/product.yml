@@ -55,6 +55,8 @@ ownership:
 release:
   requires:
   - libxgc2-camera-dev
+  dependency_policy:
+    libxgc2-camera-dev: rebuild
   repository: lxk36/xgc2-camera-ros1
   ref: main
   workflow: release.yml
