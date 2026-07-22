@@ -22,7 +22,7 @@ mkdir -p \
   "${MANIFEST_TEST_ROOT}/manifests"
 printf '%s\n' \
   'Package: xgc2-camera-manifest-contract' \
-  'Version: 0.3.0-1' \
+  'Version: 0.3.0-2' \
   'Section: misc' \
   'Priority: optional' \
   "Architecture: ${MANIFEST_TEST_ARCH}" \
@@ -31,13 +31,13 @@ printf '%s\n' \
   >"${MANIFEST_TEST_ROOT}/package/DEBIAN/control"
 dpkg-deb --build \
   "${MANIFEST_TEST_ROOT}/package" \
-  "${MANIFEST_TEST_ROOT}/debs/xgc2-camera-manifest-contract_0.3.0-1_${MANIFEST_TEST_ARCH}.deb" \
+  "${MANIFEST_TEST_ROOT}/debs/xgc2-camera-manifest-contract_0.3.0-2_${MANIFEST_TEST_ARCH}.deb" \
   >/dev/null
 python3 .xgc2/scripts/xgc2_artifact_manifest.py build \
   --deb-dir "${MANIFEST_TEST_ROOT}/debs" \
   --output-dir "${MANIFEST_TEST_ROOT}/manifests" \
   --product xgc2-camera-ros1 \
-  --product-version 0.3.0-1 \
+  --product-version 0.3.0-2 \
   --distribution focal \
   --architecture "${MANIFEST_TEST_ARCH}" \
   --source-sha 0000000000000000000000000000000000000000 \
@@ -86,7 +86,7 @@ assert set(manifest) == {
 }
 assert manifest["schema"] == "xgc2.build-artifact.v1"
 assert manifest["product"] == "xgc2-camera-ros1"
-assert manifest["version"] == "0.3.0-1"
+assert manifest["version"] == "0.3.0-2"
 assert set(manifest["ci"]) == {"run_id", "workflow", "workflow_ref"}
 assert len(manifest["debs"]) == 1
 deb = manifest["debs"][0]
@@ -94,14 +94,14 @@ assert set(deb) == {
     "file", "package", "version", "architecture", "sha256", "size",
 }
 assert deb["package"] == "xgc2-camera-manifest-contract"
-assert deb["version"] == "0.3.0-1"
+assert deb["version"] == "0.3.0-2"
 assert len(deb["sha256"]) == 64
 assert deb["size"] > 0
 PY
 
 grep -q '^id: xgc2-camera-ros1$' .xgc2/product.yml
-grep -q '^version: 0.3.0-1$' .xgc2/product.yml
-grep -q '^    focal: 0.3.0-1$' .xgc2/product.yml
+grep -q '^version: 0.3.0-2$' .xgc2/product.yml
+grep -q '^    focal: 0.3.0-2$' .xgc2/product.yml
 if grep -q '^    focal: .*~focal' .xgc2/product.yml; then
   echo "single-distribution ROS1 package version must not retain a focal suffix" >&2
   exit 1
