@@ -4,7 +4,6 @@ set -euo pipefail
 ROS_DISTRO="${ROS_DISTRO:-noetic}"
 PREFIX="/opt/ros/${ROS_DISTRO}"
 DRIVER="${PREFIX}/lib/xgc_camera_driver/xgc_camera_driver_node"
-PLUGIN="/usr/share/xgc2/process-definitions/xgc2-camera-driver-ros1.json"
 
 source "${PREFIX}/setup.bash"
 dpkg -s ros-noetic-xgc-camera-driver >/dev/null

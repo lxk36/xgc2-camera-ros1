@@ -49,9 +49,7 @@ docker run --rm \
     rm -rf /workspace/work/src /workspace/work/build /workspace/work/devel /workspace/work/install-root
     mkdir -p \
       /workspace/work/src/xgc_camera_driver \
-      /workspace/work/src/process-definitions
     rsync -a --delete /workspace/repo/xgc_camera_driver/ /workspace/work/src/xgc_camera_driver/
-    rsync -a --delete /workspace/repo/process-definitions/ /workspace/work/src/process-definitions/
     cd /workspace/work
     source /opt/ros/noetic/setup.bash
     catkin_make -DCMAKE_BUILD_TYPE=RelWithDebInfo

@@ -77,12 +77,10 @@ build_driver() {
   local package_root="${BUILD_ROOT}/${package_name}"
   mkdir -p "${package_root}"
   copy_ros_package xgc_camera_driver "${package_root}"
-  copy_path "${INSTALL_ROOT}/usr/share/xgc2/process-definitions/xgc2-camera-driver-ros1.json" "${package_root}"
   write_control "${package_root}" "${package_name}" \
     "libavcodec58, libavutil56, libopencv-core4.2, libopencv-imgcodecs4.2, libopencv-imgproc4.2, libswscale5, libxgc2-camera-dev (>= 0.1.0-1~focal), ros-noetic-camera-info-manager, ros-noetic-cv-bridge, ros-noetic-diagnostic-msgs, ros-noetic-diagnostic-updater, ros-noetic-image-transport, ros-noetic-roscpp, ros-noetic-roslaunch, ros-noetic-rostopic, ros-noetic-sensor-msgs" \
     "XGC2 ROS Noetic adapter for the independent Linux camera core"
   test -x "${package_root}${PREFIX}/lib/xgc_camera_driver/xgc_camera_driver_node"
-  test -f "${package_root}/usr/share/xgc2/process-definitions/xgc2-camera-driver-ros1.json"
   find "${package_root}" -type d -exec chmod 0755 {} +
   find "${package_root}" -type f -exec chmod 0644 {} +
   chmod 0755 "${package_root}${PREFIX}/lib/xgc_camera_driver/xgc_camera_driver_node"

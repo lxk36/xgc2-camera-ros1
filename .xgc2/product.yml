@@ -58,7 +58,6 @@ ownership:
   paths:
   - /opt/ros/noetic/share/xgc_camera_driver
   - /opt/ros/noetic/lib/xgc_camera_driver
-  - /usr/share/xgc2/process-definitions/xgc2-camera-driver-ros1.json
 release:
   requires:
   - libxgc2-camera-dev

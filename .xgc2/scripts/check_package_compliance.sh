@@ -57,7 +57,6 @@ for path in sorted(root.glob("xgc_camera_*/package.xml")):
 for path in sorted(root.glob("xgc_camera_*/*/*.launch")):
     ET.parse(path)
 
-plugin_path = root / "process-definitions/xgc2-camera-driver-ros1.json"
 plugin = json.loads(plugin_path.read_text(encoding="utf-8"))
 assert plugin["apiVersion"] == "xgc.execution.process/v1"
 definitions = plugin["definitions"]
@@ -107,11 +106,7 @@ if grep -q '^    focal: .*~focal' .xgc2/product.yml; then
   exit 1
 fi
 grep -q 'xgc2::camera' xgc_camera_driver/CMakeLists.txt
-grep -q '/usr/share/xgc2/process-definitions' xgc_camera_driver/CMakeLists.txt
-grep -q '/workspace/repo/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
-grep -q '/workspace/work/src/process-definitions/' .xgc2/scripts/build_debs_in_docker.sh
 if grep -R -E 'xgc_camera_calibration|xgc2-camera-(intrinsic|extrinsic)|xgc2-camera-calibration-ros1.json' \
-  process-definitions xgc_camera_driver .xgc2/product.yml \
   .xgc2/scripts/build_debs_in_docker.sh .xgc2/scripts/package_debs.sh \
   .xgc2/scripts/check_installed_packages.sh >/dev/null; then
   echo "calibration implementation leaked into the ROS camera driver product" >&2

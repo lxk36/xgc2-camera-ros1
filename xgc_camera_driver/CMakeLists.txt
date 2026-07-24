@@ -38,9 +38,6 @@ install(TARGETS xgc_camera_driver_node
 install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../process-definitions/xgc2-camera-driver-ros1.json
-  DESTINATION /usr/share/xgc2/process-definitions
-)
 
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
